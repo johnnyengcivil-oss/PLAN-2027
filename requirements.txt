@@ -1,0 +1,14 @@
+# Núcleo obrigatório — tudo local, sem API paga.
+openpyxl>=3.1.0        # leitura .xlsx (somente leitura)
+xlrd>=2.0.1            # leitura .xls legado (BIFF8)
+rapidfuzz>=3.0.0       # similaridade textual
+
+# Opcional — camada semântica por embeddings.
+# Sem estes pacotes o sistema continua funcionando: semantic.py cai
+# automaticamente no backend determinístico TF-IDF/char-ngram (ver docs).
+# sentence-transformers>=2.2.0
+# torch>=2.0.0
+
+# Desenvolvimento
+# pytest>=7.0
+# pyinstaller>=6.0

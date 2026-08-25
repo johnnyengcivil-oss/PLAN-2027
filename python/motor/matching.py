@@ -470,3 +470,273 @@ class BuscadorServicos:
             alvo = normalizar_texto(termo)
             saida.sort(key=lambda d: -similaridade_textual(alvo, d["descricao"]))
         return saida[:limite]
+
+
+# ------------------------------------------------------------ materiais
+
+def chave_tecnica(descricao: str, unidade: str = "") -> str:
+    """Chave que identifica um insumo com seus discriminantes técnicos.
+
+    Existe por causa do item 58: "AREIA MÉDIA" pode virar vínculo global,
+    mas "BLOCO DE CONCRETO" sem dimensão não pode. Incluindo os atributos
+    técnicos na chave, o vínculo confirmado para o bloco de 14 cm não é
+    reaproveitado para o de 19 cm.
+    """
+    spec = techspec.extrair(descricao, unidade)
+    partes: list[str] = []
+    if spec.materiais:
+        partes.append("MAT:" + "+".join(sorted(spec.materiais)))
+    if spec.espessura_cm is not None:
+        partes.append(f"ESP:{spec.espessura_cm:g}")
+    if spec.diametro_mm is not None:
+        partes.append(f"DIA:{spec.diametro_mm:g}")
+    if spec.fck_mpa is not None:
+        partes.append(f"FCK:{spec.fck_mpa:g}")
+    if spec.classe_aco:
+        partes.append(f"CA:{spec.classe_aco}")
+    if spec.dimensoes_cm:
+        partes.append("DIM:" + "x".join(f"{d:g}" for d in spec.dimensoes_cm))
+    if spec.tracos:
+        partes.append("TR:" + "+".join(sorted(spec.tracos)))
+    nucleo = "|".join(partes)
+    base = normalizar_texto(descricao)
+    return f"{nucleo}||{base}" if nucleo else base
+
+
+def vinculo_e_seguro_como_global(descricao: str, unidade: str = "") -> tuple[bool, str]:
+    """Decide se um vínculo pode valer globalmente (item 58).
+
+    Um insumo cujo nome sugere variantes dimensionais mas não traz a
+    dimensão é ambíguo: vincular globalmente propagaria um erro para
+    todas as composições que o usam.
+    """
+    spec = techspec.extrair(descricao, unidade)
+    sem_dimensao = (spec.espessura_cm is None and spec.diametro_mm is None
+                    and not spec.dimensoes_cm and spec.fck_mpa is None
+                    and not spec.classe_aco)
+    exige_dimensao = bool(spec.materiais & {
+        "BLOCO_CONCRETO", "BLOCO_CERAMICO", "TIJOLO", "ACO", "PVC",
+        "COBRE", "GALVANIZADO", "CERAMICO", "MADEIRA", "VIDRO"})
+    if sem_dimensao and exige_dimensao:
+        return False, ("Insumo admite variantes dimensionais mas a descrição não "
+                       "traz a dimensão. O vínculo fica restrito a esta composição "
+                       "até que o usuário defina a característica técnica.")
+    return True, ""
+
+
+class BuscadorMateriais:
+    """Busca itens internos equivalentes a um insumo da referência (itens 23, 24, 28).
+
+    Materiais e equipamentos usam o mesmo algoritmo, mudando o universo:
+    equipamento só é procurado nas famílias de equipamento da base interna.
+    """
+
+    def __init__(self, con: sqlite3.Connection, cfg: Config,
+                 semantico: MotorSemantico) -> None:
+        self.con = con
+        self.cfg = cfg
+        self.semantico = semantico
+        self._linhas: dict[str, list[sqlite3.Row]] = {}
+        self._specs: dict[str, list[techspec.Spec]] = {}
+        self._raridade: dict[str, IndiceRaridade] = {}
+        self._indice_por_codigo: dict[str, int] = {}
+
+    def _nome_indice(self, tipo: str) -> str:
+        return f"materiais_{tipo.lower()}"
+
+    def carregar(self, tipo: str = "MATERIAL", forcar: bool = False) -> None:
+        if tipo in self._linhas and not forcar:
+            return
+        self._linhas[tipo] = self.con.execute(
+            "SELECT codigo, familia, unidade, unidade_orig, descricao,"
+            " descricao_norm, tipo_item, preco, preco_ultimo, data_ultimo"
+            " FROM company_materials WHERE tipo_item = ? ORDER BY codigo",
+            (tipo,)).fetchall()
+        linhas = self._linhas[tipo]
+        self._specs[tipo] = [techspec.extrair(r["descricao"], r["unidade"])
+                             for r in linhas]
+        self._raridade[tipo] = IndiceRaridade([r["descricao"] for r in linhas])
+        self.semantico.indexar(
+            self._nome_indice(tipo),
+            [r["descricao"] for r in linhas],
+            [r["codigo"] for r in linhas], forcar=forcar)
+
+    def buscar(
+        self,
+        descricao: str,
+        unidade: str = "",
+        *,
+        tipo: str = "MATERIAL",
+        top_n: int = 10,
+        score_minimo: float | None = None,
+        familia: str = "",
+        largura_prefiltro: int = 260,
+        usar_vinculo: bool = True,
+    ) -> list[Candidato]:
+        """Melhores candidatos internos para um insumo da referência."""
+        self.carregar(tipo)
+        linhas = self._linhas[tipo]
+        specs = self._specs[tipo]
+        raridade = self._raridade[tipo]
+        minimo = (self.cfg.score_minimo_sugestao
+                  if score_minimo is None else score_minimo)
+        nome_indice = self._nome_indice(tipo)
+
+        semelhantes = self.semantico.similaridades(nome_indice, descricao)
+        ordenados = sorted(semelhantes.items(), key=lambda kv: -kv[1])
+        indices = [i for i, _ in ordenados[:largura_prefiltro]]
+        vistos = set(indices)
+        alvo = normalizar_texto(descricao)
+        if _TEM_RAPIDFUZZ and alvo:
+            lexicais = []
+            for i, linha in enumerate(linhas):
+                if i in vistos:
+                    continue
+                escore = fuzz.token_set_ratio(alvo, linha["descricao_norm"])
+                if escore >= 65:
+                    lexicais.append((escore, i))
+            lexicais.sort(reverse=True)
+            indices.extend(i for _, i in lexicais[:largura_prefiltro])
+        if familia:
+            alvo_familia = normalizar_texto(familia)
+            indices = [i for i in indices
+                       if normalizar_texto(linhas[i]["familia"]) == alvo_familia]
+
+        spec_consulta = techspec.extrair(descricao, unidade)
+        nucleo = raridade.determinante(descricao)
+        semelhancas = self.semantico.similaridades(nome_indice, descricao, indices)
+
+        candidatos: list[Candidato] = []
+        for i in indices:
+            linha = linhas[i]
+            score, componentes, comp = pontuar(
+                descricao, unidade, linha["descricao"], linha["unidade"],
+                pesos=self.cfg.pesos_material, faixas=self.cfg.faixas_confianca,
+                sim_semantica=semelhancas.get(i, 0.0),
+                cobertura=raridade.cobertura(descricao, linha["descricao"]),
+                spec_consulta=spec_consulta, spec_alvo=specs[i])
+            penalidades = list(comp.penalidades)
+            if nucleo and not raridade.contem(nucleo, linha["descricao"]):
+                score *= FATOR_TERMO_AUSENTE
+                penalidades.append(
+                    f"Termo determinante \"{nucleo}\" ausente no item interno.")
+            if score < minimo:
+                continue
+            conversao = units.converter(
+                linha["unidade"], unidade,
+                descricao_produto=linha["descricao"],
+                regra_produto=self._regra_cadastrada(
+                    linha["codigo"], linha["unidade"], unidade))
+            candidatos.append(Candidato(
+                origem="EMPRESA", codigo=linha["codigo"],
+                descricao=linha["descricao"], unidade=linha["unidade"],
+                score=score, componentes=componentes,
+                penalidades=penalidades, reforcos=comp.reforcos,
+                conflito_grave=comp.conflito_grave,
+                confianca=classificar_confianca(score, self.cfg.faixas_confianca),
+                extra={
+                    "familia": linha["familia"],
+                    "unidade_orig": linha["unidade_orig"],
+                    "preco": linha["preco"],
+                    "preco_ultimo": linha["preco_ultimo"],
+                    "data_ultimo": linha["data_ultimo"],
+                    "tipo_item": linha["tipo_item"],
+                    "conversao": {
+                        "ok": conversao.ok,
+                        "fator": conversao.fator,
+                        "metodo": conversao.metodo,
+                        "justificativa": conversao.justificativa,
+                        "pendencia": conversao.pendencia,
+                    },
+                }))
+
+        candidatos.sort(key=lambda c: -c.score)
+        candidatos = candidatos[:top_n]
+        if usar_vinculo:
+            candidatos = self._promover_vinculo(descricao, unidade, tipo,
+                                                candidatos, top_n)
+        return candidatos
+
+    def _regra_cadastrada(self, codigo: str, origem_un: str,
+                          destino_un: str) -> float | None:
+        """Fator já cadastrado para este material (item 26)."""
+        from .normalize import normalizar_unidade
+        linha = self.con.execute(
+            "SELECT fator FROM conversion_rules WHERE escopo = 'MATERIAL'"
+            " AND chave = ? AND unidade_origem = ? AND unidade_destino = ?",
+            (codigo, normalizar_unidade(origem_un),
+             normalizar_unidade(destino_un))).fetchone()
+        return linha["fator"] if linha else None
+
+    def _promover_vinculo(self, descricao: str, unidade: str, tipo: str,
+                          candidatos: list[Candidato], top_n: int) -> list[Candidato]:
+        """Reaproveita vínculo já validado para o mesmo insumo (itens 33 e 34).
+
+        Casa pela chave técnica — não pelo nome — para não reaproveitar o
+        vínculo do bloco de 14 cm no de 19 cm (item 58).
+        """
+        chave = chave_tecnica(descricao, unidade)
+        linha = self.con.execute(
+            "SELECT codigo_empresa, score_original, fator_conversao,"
+            " metodo_conversao FROM material_mappings"
+            " WHERE chave_tecnica = ? AND tipo = ? AND status = 'ATUAL'"
+            " AND confirmado = 1 AND escopo_vinculo = 'GLOBAL'"
+            " ORDER BY data DESC LIMIT 1", (chave, tipo)).fetchone()
+        if linha is None:
+            return candidatos
+
+        codigo = linha["codigo_empresa"]
+        existente = next((c for c in candidatos if c.codigo == codigo), None)
+        if existente is None:
+            interno = self.con.execute(
+                "SELECT codigo, familia, unidade, unidade_orig, descricao, preco,"
+                " preco_ultimo, data_ultimo, tipo_item FROM company_materials"
+                " WHERE codigo = ?", (codigo,)).fetchone()
+            if interno is None:
+                return candidatos
+            existente = Candidato(
+                origem="EMPRESA", codigo=interno["codigo"],
+                descricao=interno["descricao"], unidade=interno["unidade"],
+                score=linha["score_original"] or 1.0,
+                extra={"familia": interno["familia"], "preco": interno["preco"],
+                       "unidade_orig": interno["unidade_orig"],
+                       "preco_ultimo": interno["preco_ultimo"],
+                       "data_ultimo": interno["data_ultimo"],
+                       "tipo_item": interno["tipo_item"],
+                       "conversao": {"ok": True,
+                                     "fator": linha["fator_conversao"],
+                                     "metodo": linha["metodo_conversao"],
+                                     "justificativa": "Conversão do vínculo validado.",
+                                     "pendencia": ""}})
+        else:
+            candidatos = [c for c in candidatos if c is not existente]
+
+        existente.tipo_origem = ORIGEM_VINCULO_VALIDADO
+        existente.confianca = "VALIDADO"
+        existente.reforcos = ["Vínculo já confirmado pelo usuário para este insumo."
+                              ] + existente.reforcos
+        return [existente] + candidatos[:max(0, top_n - 1)]
+
+    def pesquisa_manual(self, termo: str, *, tipo: str = "", familia: str = "",
+                        unidade: str = "", limite: int = 50) -> list[dict[str, Any]]:
+        """Pesquisa livre na base interna, com filtros (item 36)."""
+        sql = ("SELECT codigo, familia, unidade, unidade_orig, descricao, preco,"
+               " tipo_item FROM company_materials WHERE 1=1")
+        params: list[Any] = []
+        if tipo:
+            sql += " AND tipo_item = ?"
+            params.append(tipo)
+        if familia:
+            sql += " AND familia = ?"
+            params.append(familia)
+        if unidade:
+            sql += " AND unidade = ?"
+            params.append(units.normalizar_unidade(unidade))
+        for palavra in (p for p in normalizar_texto(termo).split() if p):
+            sql += " AND descricao_norm LIKE ?"
+            params.append(f"%{palavra}%")
+        linhas = [dict(l) for l in self.con.execute(sql, tuple(params)).fetchall()]
+        if termo:
+            alvo = normalizar_texto(termo)
+            linhas.sort(key=lambda d: -similaridade_textual(alvo, d["descricao"]))
+        return linhas[:limite]

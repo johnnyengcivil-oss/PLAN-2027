@@ -110,6 +110,7 @@ class Spec:
     comprimento_m: float | None = None
     normas: set[str] = field(default_factory=set)
     tracos: set[str] = field(default_factory=set)
+    classe_cimento: str = ""
     potencia: float | None = None
     abrangente: bool = False
     numeros: set[float] = field(default_factory=set)
@@ -123,6 +124,7 @@ class Spec:
             "diametro_pol": self.diametro_pol,
             "fck_mpa": self.fck_mpa,
             "classe_aco": self.classe_aco,
+            "classe_cimento": self.classe_cimento,
             "dimensoes_cm": list(self.dimensoes_cm),
             "comprimento_m": self.comprimento_m,
             "normas": sorted(self.normas),
@@ -141,6 +143,9 @@ _RE_POL_FRAC = re.compile(r"(\d{1,2})\s*/\s*(\d{1,2})\s*(?:\"|\bPOL\b)")
 _RE_POL_MISTA = re.compile(r"\b(\d{1,2})\s+(\d{1,2})\s*/\s*(\d{1,2})\s*(?:\"|\bPOL\b)")
 _RE_FCK = re.compile(rf"\bF\s*C\s*K\s*[=:]?\s*({_NUM})\s*(?:MPA)?|\b({_NUM})\s*MPA\b")
 _RE_CA = re.compile(r"\bCA[\s\-]?(25|50|60)\b")
+# Tipo de cimento Portland: CP-II, CPII-E, CP-V ARI, ... O tipo muda a
+# aplicação e o preço, então é discriminante técnico, não sinônimo.
+_RE_CP = re.compile(r"\bCP\s*[\-]?\s*(I{1,3}V?|IV|V)\b")
 _RE_NORMA = re.compile(r"\b(?:NBR|ABNT|DIN|ASTM|EB|NB)\s*[\-]?\s*(\d{3,5})\b")
 _RE_TRACO = re.compile(r"\b(\d{1,2})\s*:\s*(\d{1,2})(?:\s*:\s*(\d{1,2}))?\b")
 _RE_DIMS = re.compile(rf"({_NUM})\s*[X]\s*({_NUM})(?:\s*[X]\s*({_NUM}))?\s*(CM|MM|M)?\b")
@@ -243,6 +248,11 @@ def extrair(descricao: str, unidade: str = "") -> Spec:
     mca = _RE_CA.search(t)
     if mca:
         spec.classe_aco = f"CA{mca.group(1)}"
+
+    if "CIMENTO" in spec.materiais:
+        mcp = _RE_CP.search(t)
+        if mcp:
+            spec.classe_cimento = f"CP{mcp.group(1)}"
 
     spec.normas = {f"NBR{m.group(1)}" for m in _RE_NORMA.finditer(t)}
 
@@ -401,6 +411,14 @@ def comparar(a: Spec, b: Spec) -> Comparacao:
         else:
             c.registrar(0.35, f"Classe do aço divergente: {a.classe_aco} x {b.classe_aco}",
                         grave=True)
+
+    # --- tipo de cimento Portland
+    if a.classe_cimento and b.classe_cimento:
+        if a.classe_cimento == b.classe_cimento:
+            c.reforcos.append(f"Tipo de cimento coincidente: {a.classe_cimento}")
+        else:
+            c.registrar(0.45, f"Tipo de cimento divergente: "
+                              f"{a.classe_cimento} x {b.classe_cimento}")
 
     # --- dimensões (porcelanato 60x60 x 90x90)
     if a.dimensoes_cm and b.dimensoes_cm:

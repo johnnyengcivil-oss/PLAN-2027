@@ -18,6 +18,8 @@ dist/
 build/
 *.spec
 Sistema_Composicoes.xlsm
+Sistema_Composicoes.xlsx
+_temp/
 
 # Python
 __pycache__/

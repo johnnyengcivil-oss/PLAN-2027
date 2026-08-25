@@ -22,6 +22,7 @@ from typing import Any
 from .normalize import (
     UNIDADES_ABSTRATAS,
     UNIDADES_EMBALAGEM,
+    UNIDADES_PERIODO,
     normalizar_texto,
     normalizar_unidade,
 )
@@ -32,7 +33,7 @@ MASSA = {"G": 0.001, "KG": 1.0, "TON": 1000.0}
 COMPRIMENTO = {"MM": 0.001, "CM": 0.01, "M": 1.0, "KM": 1000.0}
 AREA = {"M2": 1.0, "CM2": 0.0001, "HA": 10000.0, "KM2": 1_000_000.0}
 VOLUME = {"L": 0.001, "DM3": 0.001, "M3": 1.0, "CM3": 1e-6}
-TEMPO = {"H": 1.0, "DIA": 24.0}
+TEMPO = {"H": 1.0}   # períodos de locação ficam fora: ver UNIDADES_PERIODO
 CONTAGEM = {"UN": 1.0, "DZ": 12.0, "MIL": 1000.0, "PAR": 2.0}
 
 _GRANDEZAS: dict[str, dict[str, float]] = {
@@ -78,12 +79,13 @@ def _falha(pendencia: str, msg: str, **det: Any) -> Conversao:
 # "50 KG", "3,6 L", "18 LITROS", "12,00 M", "20KG"
 _RE_CONTEUDO = re.compile(
     r"(?<![\d,.])(\d{1,5}(?:[.,]\d{1,3})?)\s*"
-    r"(KG|QUILOS?|G|GRAMAS?|L|LT|LITROS?|ML|M3|M2|M|MM|CM|UN|UNIDADES?|PECAS?)\b"
+    r"(KGS|KG|QUILOS?|GRAMAS?|G|LITROS?|LTS|LT|ML|L|M3|M2|MM|CM|M|"
+    r"UNIDADES?|UN|PECAS?)\b"
 )
 
 _ALIAS_CONTEUDO = {
-    "QUILO": "KG", "QUILOS": "KG", "GRAMA": "G", "GRAMAS": "G",
-    "LT": "L", "LITRO": "L", "LITROS": "L",
+    "KGS": "KG", "QUILO": "KG", "QUILOS": "KG", "GRAMA": "G", "GRAMAS": "G",
+    "LT": "L", "LTS": "L", "LITRO": "L", "LITROS": "L",
     "UNIDADE": "UN", "UNIDADES": "UN", "PECA": "UN", "PECAS": "UN",
 }
 
@@ -195,6 +197,15 @@ def converter(
                          + (f" ({origem_regra})" if origem_regra else "."),
                          detalhes={"origem_regra": origem_regra})
 
+    # Período de locação x hora produtiva: decisão da empresa, não física.
+    if ({o, d} & UNIDADES_PERIODO) and ({o, d} - UNIDADES_PERIODO):
+        periodo = o if o in UNIDADES_PERIODO else d
+        return _falha("CONVERSAO_PENDENTE",
+                      f"{periodo} é período de locação; a equivalência com "
+                      f"{d if periodo == o else o} depende da jornada adotada "
+                      f"pela empresa. Cadastre a regra de conversão.",
+                      origem=o, destino=d)
+
     if o in UNIDADES_ABSTRATAS or d in UNIDADES_ABSTRATAS:
         return _falha("UNIDADE_INCOMPATIVEL",
                       f"Unidade sem grandeza física definida ({o} → {d}).",
@@ -291,6 +302,8 @@ def compativel(unidade_a: str, unidade_b: str) -> float:
     g_a, g_b = grandeza_de(a), grandeza_de(b)
     if g_a and g_a == g_b:
         return 0.85
+    if a in UNIDADES_PERIODO or b in UNIDADES_PERIODO:
+        return 0.35          # locação x hora: exige regra da empresa
     if a in UNIDADES_EMBALAGEM or b in UNIDADES_EMBALAGEM:
         return 0.40
     return 0.0

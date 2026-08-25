@@ -29,7 +29,12 @@ _MAPA_UNIDADES = {
     "L": "L", "LT": "L", "LITRO": "L", "LTS": "L",
     # tempo
     "H": "H", "HR": "H", "HORA": "H", "HS": "H",
-    "DIA": "DIA", "DD": "DZ", "MES": "MES", "MS": "MES",
+    # ATENÇÃO: nestas bases "DD" é DIÁRIA, não dúzia. Verificado: a família
+    # DIÁRIAS dos serviços usa DD, 152 dos 187 materiais em DD são "Locação
+    # de ...", e não há nenhuma ocorrência de "dúzia" na base interna — a
+    # referência escreve "DÚZIA" por extenso quando é o caso.
+    "DIA": "DIA", "DD": "DIA", "DIARIA": "DIA",
+    "MES": "MES", "MS": "MES", "SEMANA": "SEMANA", "SEM": "SEMANA",
     # contagem / embalagem
     "UN": "UN", "UND": "UN", "UNID": "UN", "UNIDADE": "UN", "PC": "UN",
     "PECA": "UN", "PÇ": "UN",
@@ -65,6 +70,12 @@ UNIDADES_EMBALAGEM = {
 
 # Unidades sem grandeza física definida — não convertem nunca.
 UNIDADES_ABSTRATAS = {"VB", "PCT", "ENS"}
+
+# Períodos de locação. NÃO convertem automaticamente para hora produtiva:
+# uma diária de locação é disponibilidade de calendário, enquanto o "H" das
+# composições de referência é hora de equipamento em operação. Quantas horas
+# produtivas há numa diária é decisão da empresa, não constante física.
+UNIDADES_PERIODO = {"DIA", "MES", "SEMANA"}
 
 _RE_ESPACOS = re.compile(r"\s+")
 _RE_NAO_ALFANUM = re.compile(r"[^0-9A-Za-z]+")

@@ -1,5 +1,6 @@
-# Bases originais da empresa — NUNCA versionadas (dados proprietários, atualizadas
-# periodicamente pelo usuário). Devem ficar em BASES/ na máquina local.
+# Bases originais da empresa — NUNCA versionadas (dados proprietários,
+# atualizados periodicamente). Ficam em BASES/ na máquina local.
+# BASES/LEIA-ME.txt é versionado só para a pasta existir após o clone.
 BASES/*.xls
 BASES/*.xlsx
 BASES/*.xlsm

@@ -1,0 +1,39 @@
+COLOQUE AQUI OS CINCO ARQUIVOS DE BASE
+======================================
+
+Esta pasta deve conter:
+
+  1. Base de servicos / mao de obra da empresa      (.xlsx)
+     colunas: Familia | CODIGO | UN | DESCRICAO | PRECO APROVADO | VALOR
+
+  2. MATERIAIS.xlsx                                  (.xlsx)
+     colunas: ITEM | CODIGO_MATERIAL | FAMILIA | UNIDADE | MATERIAL |
+              ULTIMO_PRECO | VALOR
+
+  3. Composicoes EDIF                                (.xls)
+  4. Composicoes INFRA                               (.xls)
+  5. Composicoes AUXILIARES                          (.xls)
+
+OS NOMES DOS ARQUIVOS NAO IMPORTAM.
+
+O sistema identifica EDIF, INFRA e AUXILIARES pelo CONTEUDO de cada
+arquivo - o titulo institucional da segunda linha e o nome da aba - e nao
+pelo nome, pela ordem alfabetica ou pelo tamanho. Isso foi verificado com
+os arquivos renomeados para nomes sem significado.
+
+Se algum arquivo nao for reconhecido, e possivel indicar manualmente na
+aba CONFIGURACAO do Excel, celulas C13 (EDIF), C14 (INFRA) e C15 (AUX).
+A escolha fica gravada em config.json e nao precisa ser repetida.
+
+ESTES ARQUIVOS NUNCA SAO ALTERADOS PELO SISTEMA.
+
+Sao abertos exclusivamente em modo de leitura. O sistema nao grava, nao
+converte, nao renomeia e nao salva por cima. Toda a transformacao ocorre
+em memoria e termina no banco local banco_composicoes.db.
+
+Se quiser garantir isso tambem no Windows, marque os cinco arquivos como
+"Somente leitura" nas propriedades do arquivo. O sistema continua
+funcionando normalmente.
+
+Nenhum destes arquivos e enviado ao repositorio Git (ver .gitignore):
+sao dados proprietarios de preco da empresa, atualizados periodicamente.

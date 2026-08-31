@@ -48,7 +48,10 @@ SERVIÇO DE MÃO DE OBRA DA EMPRESA
 python -m venv .venv
 .venv/bin/pip install -r requirements.txt          # Windows: .venv\Scripts\pip
 
-# coloque as 5 bases em BASES/ e importe
+# confere dependências, bases, banco, motor e interface
+.venv/bin/python verificar.py
+
+# coloque as 5 bases em BASES/ (ver BASES/LEIA-ME.txt) e importe
 .venv/bin/python python/main.py --json '{"acao":"atualizar_bases"}'
 
 # prova funcional completa (item 65)

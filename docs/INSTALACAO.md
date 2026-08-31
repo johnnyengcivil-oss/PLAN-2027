@@ -1,8 +1,26 @@
 # Instalação
 
+> **Conferir a qualquer momento:** `python verificar.py` diz, passo a passo,
+> o que já está pronto e o que falta — com o comando exato de cada pendência.
+
 Requisitos: Windows com Excel, **usuário comum** — nenhuma etapa pede
 privilégio de administrador, serviço, driver ou escrita em `Program Files`
 (item 62).
+
+---
+
+## 0. Obter os arquivos
+
+```bat
+git clone -b claude/excel-vba-python-composicoes-f40k5d ^
+    https://github.com/johnnyengcivil-oss/PLAN-2027.git C:\BANCO_COMPOSICOES
+```
+
+Sem Git: baixe o ZIP do branch pelo GitHub (**Code → Download ZIP**) e
+extraia para `C:\BANCO_COMPOSICOES`.
+
+As cinco bases **não vêm no repositório** — são dados proprietários de
+preço, atualizados periodicamente. Você as copia no passo 1.
 
 ---
 
@@ -54,11 +72,15 @@ O `modPythonBridge` procura o interpretador nesta ordem:
 3. `.venv\Scripts\python.exe` + `python\main.py`;
 4. `python` do PATH.
 
-Teste sem o Excel:
+Confira o que está pronto:
 
 ```bat
-.venv\Scripts\python python\main.py --json "{\"acao\":\"status\"}"
+.venv\Scripts\python verificar.py
 ```
+
+Ele percorre dependências, bases, banco, motor e interface, e imprime o
+comando exato de cada pendência. Devolve código de saída 0 quando o
+sistema está pronto.
 
 ### Camada semântica opcional
 

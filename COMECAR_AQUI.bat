@@ -50,8 +50,9 @@ echo Importando as cinco bases...
 echo ^(os arquivos originais sao abertos SOMENTE PARA LEITURA^)
 echo.
 
-".venv\Scripts\python.exe" python\main.py --json "{\"acao\":\"atualizar_bases\"}" >nul
-".venv\Scripts\python.exe" verificar.py
+call "%~dp0_localizar_python.bat"
+%PY_EXE% python\main.py --json "{\"acao\":\"atualizar_bases\"}" >nul
+%PY_EXE% verificar.py
 if errorlevel 1 (
     echo.
     echo   Faltam itens - veja as linhas [FALTA] acima.

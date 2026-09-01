@@ -27,3 +27,6 @@ __pycache__/
 *.py[cod]
 .venv/
 .pytest_cache/
+
+# Python portátil colocado pelo usuário
+python-portatil/

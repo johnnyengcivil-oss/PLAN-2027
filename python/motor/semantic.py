@@ -131,7 +131,7 @@ class MotorSemantico:
             import sentence_transformers  # noqa: F401
             return "sentence_transformers"
         except Exception:                        # noqa: BLE001
-            return "tfidf"
+            return "tfidf"          # instalação quebrada também cai aqui
 
     def _modelo_st(self):
         if self._st is None:

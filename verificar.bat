@@ -2,15 +2,17 @@
 title Verificacao - Banco Proprio de Composicoes
 cd /d "%~dp0"
 
-if not exist ".venv\Scripts\python.exe" (
+call "%~dp0_localizar_python.bat"
+
+if not defined PY_EXE (
     echo.
-    echo   O ambiente ainda nao foi instalado.
+    echo   O ambiente ainda nao foi preparado.
     echo   Execute primeiro:  instalar.bat
     echo.
     pause
     exit /b 1
 )
 
-".venv\Scripts\python.exe" verificar.py
+%PY_EXE% verificar.py
 echo.
 pause

@@ -61,6 +61,26 @@ Todos os caminhos derivam de `ThisWorkbook.Path`. Nada depende de
 
 ## 2. Python
 
+### Não tenho Python — e agora?
+
+Duas saídas. A primeira **não instala nada** no Windows.
+
+**Portátil (recomendada).** Baixe
+[`python-3.11.9-embed-amd64.zip`](https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip)
+(~10 MB) e extraia o conteúdo numa pasta `python-portatil\` criada ao lado
+do `COMECAR_AQUI.bat`, de modo a existir `python-portatil\python.exe`.
+Os scripts detectam e usam. Não mexe no registro, não pede administrador,
+e desinstalar é apagar a pasta.
+
+**Instalar normalmente.** [python.org/downloads](https://www.python.org/downloads/),
+marcando **"Add Python to PATH"** na primeira tela — vem desmarcada, e é a
+causa nº 1 de o Windows não achar o Python depois.
+
+As bibliotecas vêm prontas em `libs\`, então a instalação delas **não
+precisa de internet**. `preparar_libs.py` usa `pip --no-index` quando há
+pip e, quando não há — o caso do Python portátil —, extrai as rodas
+direto no `site-packages`.
+
 ### Caminho fácil — duplo clique
 
 Dê **duplo clique em `instalar.bat`**. Ele procura o Python, cria o

@@ -30,8 +30,9 @@ echo   MONTAR A PLANILHA DO SISTEMA
 echo ========================================================================
 echo.
 
-if not exist ".venv\Scripts\python.exe" (
-    echo   [ERRO] O ambiente ainda nao foi instalado.
+call "%~dp0_localizar_python.bat"
+if not defined PY_EXE (
+    echo   [ERRO] O ambiente ainda nao foi preparado.
     echo   Execute primeiro:  instalar.bat
     echo.
     pause
@@ -40,7 +41,7 @@ if not exist ".venv\Scripts\python.exe" (
 
 REM ------------------------------------------------- 1. gerar a pasta base
 echo [1/3] Gerando a pasta de trabalho com as 9 abas...
-".venv\Scripts\python.exe" build_xlsm.py >nul
+%PY_EXE% build_xlsm.py >nul
 if errorlevel 1 (
     echo   [ERRO] Falha ao gerar Sistema_Composicoes.xlsx
     pause

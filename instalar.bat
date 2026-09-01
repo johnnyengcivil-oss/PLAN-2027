@@ -3,17 +3,21 @@ setlocal enabledelayedexpansion
 title Instalador - Banco Proprio de Composicoes
 
 REM ===========================================================================
-REM instalar.bat - Executa o passo 2 da implantacao (ambiente e bibliotecas).
+REM instalar.bat - Prepara o ambiente Python.
 REM
-REM Basta dar DUPLO CLIQUE neste arquivo. Nao precisa abrir o Prompt de
-REM Comando nem digitar nada.
+REM DUPLO CLIQUE. Nao precisa digitar nada, nem ser administrador.
 REM
-REM Nao exige privilegio de administrador.
+REM Funciona de tres maneiras, nesta ordem:
+REM   1. Python PORTATIL na pasta python-portatil\  (nada instalado)
+REM   2. Python instalado na maquina
+REM   3. Se nao houver nenhum, explica como resolver
+REM
+REM As bibliotecas vem prontas em libs\ - a instalacao NAO precisa de
+REM internet.
 REM ===========================================================================
 
 cd /d "%~dp0"
 
-REM Quando chamado por COMECAR_AQUI.bat, nao pausa entre as etapas.
 set "PAUSAR=1"
 if /i "%~1"=="--sem-pausa" set "PAUSAR=0"
 
@@ -24,113 +28,106 @@ echo ========================================================================
 echo   Pasta: %CD%
 echo.
 
-REM ------------------------------------------------- 0. Arquivos do projeto
 if not exist "requirements.txt" (
     echo   [ERRO] Este arquivo nao esta na pasta do sistema.
-    echo.
-    echo   Esperado encontrar requirements.txt ao lado de instalar.bat.
     echo   Se voce baixou o ZIP, extraia TODO o conteudo e execute o
     echo   instalar.bat que esta dentro da pasta extraida.
     echo.
-    pause
+    if "%PAUSAR%"=="1" pause
     exit /b 1
 )
 
 REM --------------------------------------------------------------- 1. Python
-echo [1/4] Procurando o Python...
+echo [1/3] Procurando o Python...
 
-set "PY="
-REM O lancador "py" e preferido: evita o atalho da Microsoft Store, que
-REM abre a loja em vez de executar o Python.
-py -3 --version >nul 2>&1
-if not errorlevel 1 (
-    set "PY=py -3"
-) else (
-    python --version >nul 2>&1
-    if not errorlevel 1 set "PY=python"
-)
+call "%~dp0_localizar_python.bat"
 
-if not defined PY (
+if not defined PY_EXE (
     echo.
-    echo   [ERRO] Python nao encontrado nesta maquina.
+    echo   Python nao encontrado. Ha duas opcoes:
     echo.
-    echo   Instale a partir de:  https://www.python.org/downloads/
+    echo   ------------------------------------------------------------------
+    echo   OPCAO A - PORTATIL, sem instalar nada  ^(recomendada^)
+    echo   ------------------------------------------------------------------
+    echo     1. Baixe o arquivo:
+    echo        https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip
+    echo     2. Extraia o conteudo dele dentro de uma pasta chamada
+    echo        python-portatil  AQUI NESTA PASTA, de modo que exista:
+    echo          %CD%\python-portatil\python.exe
+    echo     3. Execute este instalar.bat de novo.
     echo.
-    echo   IMPORTANTE: na primeira tela do instalador, MARQUE a caixa
-    echo               "Add Python to PATH" antes de clicar em Install.
+    echo     Nao instala nada no Windows, nao mexe no registro e nao
+    echo     precisa de administrador. Para desinstalar, apague a pasta.
     echo.
-    echo   Depois de instalar, feche esta janela e execute este arquivo
-    echo   novamente.
+    echo   ------------------------------------------------------------------
+    echo   OPCAO B - Instalar o Python normalmente
+    echo   ------------------------------------------------------------------
+    echo     1. Baixe em https://www.python.org/downloads/
+    echo     2. Na PRIMEIRA tela do instalador, MARQUE a caixa
+    echo        "Add Python to PATH"  ^(vem desmarcada^)
+    echo     3. Execute este instalar.bat de novo.
     echo.
-    pause
+    echo   Abrindo a pagina de download para voce...
+    start "" "https://www.python.org/downloads/windows/"
+    echo.
+    if "%PAUSAR%"=="1" pause
     exit /b 1
 )
 
-for /f "tokens=2" %%v in ('%PY% --version 2^>^&1') do set "VERSAO=%%v"
-echo       Python !VERSAO! encontrado.
+for /f "tokens=2" %%v in ('%PY_EXE% --version 2^>^&1') do set "VERSAO=%%v"
+echo       Python !VERSAO! ^(!PY_TIPO!^)
 
-REM --------------------------------------------------------- 2. Ambiente
+REM ------------------------------------------------------- 2. ambiente
 echo.
-echo [2/4] Preparando o ambiente isolado (.venv)...
+echo [2/3] Preparando o ambiente...
 
-if exist ".venv\Scripts\python.exe" (
-    echo       Ambiente ja existe, reaproveitando.
+if "!PY_TIPO!"=="portatil" (
+    echo       Python portatil: as bibliotecas vao direto para ele.
+) else if "!PY_TIPO!"=="ambiente" (
+    echo       Ambiente .venv ja existe, reaproveitando.
 ) else (
-    %PY% -m venv .venv
-    if errorlevel 1 (
-        echo.
-        echo   [ERRO] Nao foi possivel criar o ambiente virtual.
-        echo   Verifique se ha espaco em disco e se a pasta nao esta
-        echo   sincronizada por OneDrive/Dropbox durante a instalacao.
-        echo.
-        pause
-        exit /b 1
+    if not exist ".venv\Scripts\python.exe" (
+        %PY_EXE% -m venv .venv
+        if errorlevel 1 (
+            echo   [ERRO] Nao foi possivel criar o ambiente virtual.
+            echo   Verifique o espaco em disco e se a pasta nao esta sendo
+            echo   sincronizada por OneDrive durante a instalacao.
+            echo.
+            if "%PAUSAR%"=="1" pause
+            exit /b 1
+        )
+        echo       Ambiente .venv criado.
     )
-    echo       Ambiente criado.
+    call "%~dp0_localizar_python.bat"
 )
 
-REM ------------------------------------------------------- 3. Bibliotecas
+REM ------------------------------------------------------- 3. bibliotecas
 echo.
-echo [3/4] Instalando as bibliotecas ^(pode levar alguns minutos^)...
+echo [3/3] Instalando as bibliotecas ^(a partir de libs\, sem internet^)...
 echo.
 
-".venv\Scripts\python.exe" -m pip install --upgrade pip --quiet
-".venv\Scripts\python.exe" -m pip install -r requirements.txt
+%PY_EXE% preparar_libs.py
 if errorlevel 1 (
     echo.
-    echo   [ERRO] Falha ao instalar as bibliotecas.
+    echo   [ERRO] Nao foi possivel preparar as bibliotecas.
+    echo   Veja as linhas [FALTA] acima.
     echo.
-    echo   Se a empresa usa proxy ou inspecao de rede, tente:
-    echo.
-    echo     .venv\Scripts\python -m pip install -r requirements.txt --trusted-host pypi.org --trusted-host files.pythonhosted.org
-    echo.
-    pause
+    if "%PAUSAR%"=="1" pause
     exit /b 1
 )
 
 echo.
-echo       Bibliotecas instaladas.
-
-REM ------------------------------------------------------- 4. Verificacao
-echo.
-echo [4/4] Verificando a instalacao...
-echo.
-
-".venv\Scripts\python.exe" verificar.py
+echo ------------------------------------------------------------------------
+%PY_EXE% verificar.py
 set "RESULTADO=%errorlevel%"
 
 echo.
 echo ========================================================================
 if "%RESULTADO%"=="0" (
-    echo   PASSO 2 CONCLUIDO. O ambiente esta pronto.
+    echo   AMBIENTE PRONTO.
 ) else (
-    echo   AMBIENTE PRONTO, mas ainda faltam itens - veja as linhas [FALTA]
-    echo   acima. O mais comum e faltar copiar as bases.
-    echo.
-    echo   Copie os cinco arquivos de base para a pasta:
-    echo     %CD%\BASES
-    echo.
-    echo   Depois execute este arquivo novamente.
+    echo   AMBIENTE PRONTO, mas faltam itens - veja as linhas [FALTA] acima.
+    echo   O mais comum e faltar copiar as bases para a pasta BASES.
 )
 echo ========================================================================
 echo.

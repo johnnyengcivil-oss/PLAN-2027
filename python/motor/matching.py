@@ -33,7 +33,10 @@ from .semantic import MotorSemantico
 try:
     from rapidfuzz import fuzz
     _TEM_RAPIDFUZZ = True
-except ImportError:                              # pragma: no cover
+except Exception:                                # noqa: BLE001
+    # Não é só ausência: uma roda compilada para outra versão do Python
+    # ou de outra plataforma importa e falha com AttributeError/OSError.
+    # O motor precisa continuar funcionando — difflib cobre o caso.
     _TEM_RAPIDFUZZ = False
     import difflib
 

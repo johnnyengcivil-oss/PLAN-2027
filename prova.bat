@@ -2,9 +2,11 @@
 title Prova funcional - Banco Proprio de Composicoes
 cd /d "%~dp0"
 
-if not exist ".venv\Scripts\python.exe" (
+call "%~dp0_localizar_python.bat"
+
+if not defined PY_EXE (
     echo.
-    echo   O ambiente ainda nao foi instalado.
+    echo   O ambiente ainda nao foi preparado.
     echo   Execute primeiro:  instalar.bat
     echo.
     pause
@@ -15,9 +17,6 @@ echo.
 echo Percorrendo o fluxo completo em 6 servicos reais das bases...
 echo Nenhuma escolha e gravada como definitiva.
 echo.
-
-".venv\Scripts\python.exe" prova_funcional.py --json prova\resultado.json
-echo.
-echo O resultado detalhado tambem foi gravado em prova\resultado.json
+%PY_EXE% prova_funcional.py --json prova\resultado.json
 echo.
 pause

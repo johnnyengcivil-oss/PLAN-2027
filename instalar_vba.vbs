@@ -83,6 +83,22 @@ If importados = 0 Then
     WScript.Quit 1
 End If
 
+' Cria os formularios pela API do Excel. Feito aqui, e nao distribuido
+' como arquivo .frm, porque assim quem monta o formulario e o proprio
+' Excel - entao ele e valido por construcao.
+On Error Resume Next
+excel.Run "modFormBuilder.CriarFormularios"
+If Err.Number <> 0 Then
+    WScript.Echo ""
+    WScript.Echo "  AVISO: nao foi possivel criar os formularios."
+    WScript.Echo "  (" & Err.Description & ")"
+    WScript.Echo "  O sistema continua funcionando pelas abas da planilha."
+    Err.Clear
+Else
+    WScript.Echo "  formularios criados"
+End If
+On Error GoTo 0
+
 ' Cria os botoes de todas as abas.
 On Error Resume Next
 excel.Run "modUI.ReconstruirBotoes"

@@ -214,8 +214,16 @@ def main() -> int:
     xlsm = RAIZ / "Sistema_Composicoes.xlsm"
     xlsx = RAIZ / "Sistema_Composicoes.xlsx"
     modulos = sorted((RAIZ / "vba").glob("*.bas"))
-    item(len(modulos) == 10, "Módulos VBA presentes",
-         f"{len(modulos)} de 10", "Refaça o clone do repositório.")
+    esperados = {"modAssistente", "modCompositions", "modConfig", "modDatabaseUI",
+                 "modEscolherItem", "modFormBuilder", "modJson", "modMain",
+                 "modMaterials", "modPythonBridge", "modServices", "modUI",
+                 "modUtils"}
+    presentes = {m.stem for m in modulos}
+    faltantes = sorted(esperados - presentes)
+    item(not faltantes, "Módulos VBA presentes",
+         f"{len(presentes)} de {len(esperados)}",
+         f"Faltam: {', '.join(faltantes)}. Refaça o download do pacote."
+         if faltantes else "")
     if xlsm.exists():
         item(True, "Sistema_Composicoes.xlsm pronto", "interface montada")
     elif xlsx.exists():

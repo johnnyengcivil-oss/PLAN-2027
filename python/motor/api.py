@@ -430,48 +430,99 @@ def acao_salvar_composicao(ctx: Contexto, p: dict[str, Any]) -> dict[str, Any]:
     if comp is None:
         return {"erro": "Falha ao remontar a composição para gravação."}
 
-    escolhas = p.get("itens") or []
-    if isinstance(escolhas, list):
-        for escolha in escolhas:
-            if not isinstance(escolha, dict):
-                continue
-            codins = str(escolha.get("codins_ref") or escolha.get("codins") or "")
-            codigo_interno = str(escolha.get("codigo_interno") or "")
-            if not codins or not codigo_interno:
-                continue
-            alvo = next((i for i in comp.itens if i.codins_ref == codins), None)
-            if alvo is None:
-                continue
-            interno = ctx.con.execute(
-                "SELECT codigo, descricao, unidade, unidade_orig, preco"
-                " FROM company_materials WHERE codigo = ?",
-                (codigo_interno,)).fetchone()
-            if interno is None:
-                continue
-            conv = units.converter(
-                interno["unidade"], alvo.unidade_ref,
-                descricao_produto=interno["descricao"],
-                regra_produto=(escolha.get("fator_conversao")
-                               if isinstance(escolha.get("fator_conversao"),
-                                             (int, float)) else None))
-            ctx.montador.aplicar_vinculo(alvo, {
-                "codigo": interno["codigo"], "descricao": interno["descricao"],
-                "unidade": interno["unidade"],
-                "unidade_orig": interno["unidade_orig"],
-                "preco": interno["preco"],
-                "score": escolha.get("score"),
-                "confianca": "ESCOLHA_MANUAL",
-                "vinculo_validado": False,
-                "conversao": {"ok": conv.ok, "fator": conv.fator,
-                              "metodo": conv.metodo or "REGRA_USUARIO",
-                              "justificativa": conv.justificativa,
-                              "pendencia": conv.pendencia},
-            }, alvo.coeficiente_original or 0.0)
+    _aplicar_escolhas(ctx, comp, p.get("itens"))
 
     codigo = ctx.montador.salvar(comp, usuario=ctx.usuario)
     saida = _sem_colisao_status(comp.to_dict())
     saida["codigo"] = codigo
     return saida
+
+
+def _aplicar_escolhas(ctx: Contexto, comp, escolhas: Any) -> None:
+    """Aplica ao objeto montado as decisões que o usuário tomou na tela.
+
+    Cada escolha pode trocar o item interno, fixar o coeficiente final, ou
+    as duas coisas. O cálculo continua sendo feito aqui, em código
+    determinístico — a tela só informa o que o usuário decidiu.
+    """
+    if not isinstance(escolhas, list):
+        return
+    for escolha in escolhas:
+        if not isinstance(escolha, dict):
+            continue
+        codins = str(escolha.get("codins_ref") or escolha.get("codins") or "")
+        if not codins:
+            continue
+        alvo = next((i for i in comp.itens if i.codins_ref == codins), None)
+        if alvo is None:
+            continue
+
+        codigo_interno = str(escolha.get("codigo_interno") or "")
+        if codigo_interno and codigo_interno != alvo.codigo_interno:
+            interno = ctx.con.execute(
+                "SELECT codigo, descricao, unidade, unidade_orig, preco"
+                " FROM company_materials WHERE codigo = ?",
+                (codigo_interno,)).fetchone()
+            if interno is not None:
+                conv = units.converter(
+                    interno["unidade"], alvo.unidade_ref,
+                    descricao_produto=interno["descricao"],
+                    regra_produto=(escolha.get("fator_conversao")
+                                   if isinstance(escolha.get("fator_conversao"),
+                                                 (int, float)) else None))
+                ctx.montador.aplicar_vinculo(alvo, {
+                    "codigo": interno["codigo"], "descricao": interno["descricao"],
+                    "unidade": interno["unidade"],
+                    "unidade_orig": interno["unidade_orig"],
+                    "preco": interno["preco"],
+                    "score": escolha.get("score"),
+                    "confianca": "ESCOLHA_MANUAL",
+                    "vinculo_validado": False,
+                    "conversao": {"ok": conv.ok, "fator": conv.fator,
+                                  "metodo": conv.metodo or "REGRA_USUARIO",
+                                  "justificativa": conv.justificativa,
+                                  "pendencia": conv.pendencia},
+                }, alvo.coeficiente_original or 0.0)
+
+        # Coeficiente digitado manda sobre o calculado — é decisão do
+        # engenheiro sobre o consumo real da empresa.
+        novo_coef = escolha.get("coeficiente_final")
+        if isinstance(novo_coef, (int, float)) and novo_coef >= 0:
+            alvo.coeficiente_final = float(novo_coef)
+            alvo.custo_item = alvo.coeficiente_final * (alvo.preco_interno or 0.0)
+            if alvo.pendencia == "CONVERSAO_PENDENTE":
+                alvo.pendencia = ""
+                alvo.metodo_conversao = "COEFICIENTE_MANUAL"
+                alvo.justificativa_conv = (
+                    "Coeficiente informado diretamente pelo usuário, "
+                    "dispensando a conversão automática de unidade.")
+
+        if escolha.get("excluir"):
+            alvo.incluido_no_custo = 0
+            alvo.custo_item = 0.0
+            alvo.motivo_exclusao = str(
+                escolha.get("motivo_exclusao")
+                or "Excluído pelo usuário na revisão da composição.")
+
+
+def acao_recalcular_composicao(ctx: Contexto, p: dict[str, Any]) -> dict[str, Any]:
+    """Remonta a composição aplicando as edições, sem gravar nada.
+
+    É o que permite a tela mostrar o custo mudando enquanto o usuário
+    digita um coeficiente, mantendo a matemática no Python.
+    """
+    resposta = acao_montar_composicao(ctx, p)
+    if "erro" in resposta:
+        return resposta
+    codigo_servico = _texto(p, "codigo_empresa") or _texto(p, "codigo_servico")
+    comp = ctx.montador.montar(
+        codigo_servico, resposta["origem_referencia"],
+        resposta["codigo_referencia"], top_sugestoes=1,
+        auto_vincular=bool(p.get("auto_vincular", True)))
+    if comp is None:
+        return {"erro": "Não foi possível remontar a composição."}
+    _aplicar_escolhas(ctx, comp, p.get("itens"))
+    return _sem_colisao_status(comp.to_dict())
 
 
 def acao_listar_composicoes(ctx: Contexto, p: dict[str, Any]) -> dict[str, Any]:
@@ -737,6 +788,7 @@ _ACOES: dict[str, Callable[[Contexto, dict[str, Any]], dict[str, Any]]] = {
     "alterar_vinculo_material": acao_alterar_vinculo_material,
     "montar_composicao": acao_montar_composicao,
     "salvar_composicao": acao_salvar_composicao,
+    "recalcular_composicao": acao_recalcular_composicao,
     "listar_composicoes": acao_listar_composicoes,
     "listar_pendencias": acao_listar_pendencias,
     "resolver_pendencia": acao_resolver_pendencia,

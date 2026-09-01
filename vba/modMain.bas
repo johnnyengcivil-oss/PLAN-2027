@@ -21,9 +21,9 @@ Public Sub AtualizarInicio()
     modUtils.Aguardar False
 
     If Not modPythonBridge.DeuCerto(r) Then
-        ws.Range("C6").Value = "MOTOR INDISPONIVEL"
+        ws.Range("C8").Value = "MOTOR INDISPONIVEL"
         ws.Range("C6").Interior.Color = modUtils.COR_ALERTA
-        ws.Range("C7").Value = modPythonBridge.MensagemErro(r)
+        ws.Range("C9").Value = modPythonBridge.MensagemErro(r)
         Exit Sub
     End If
 
@@ -34,21 +34,21 @@ Public Sub AtualizarInicio()
     ws.Range("C6").Interior.Color = modUtils.COR_FORTE
     ws.Range("C7").Value = modJson.ObterTexto(r, "backend_semantico")
 
-    ws.Range("C10").Value = modJson.ObterNumero(ind, "servicos_empresa")
-    ws.Range("C11").Value = modJson.ObterNumero(ind, "servicos_vinculados")
-    ws.Range("C12").Value = modJson.ObterNumero(ind, "servicos_pendentes")
-    ws.Range("C14").Value = modJson.ObterNumero(ind, "composicoes_proprias")
-    ws.Range("C15").Value = modJson.ObterNumero(ind, "composicoes_completas")
-    ws.Range("C16").Value = modJson.ObterNumero(ind, "composicoes_pendentes")
-    ws.Range("C17").Value = modJson.ObterNumero(ind, "composicoes_revisar")
-    ws.Range("C19").Value = modJson.ObterNumero(ind, "materiais_vinculados")
-    ws.Range("C20").Value = modJson.ObterNumero(ind, "equipamentos_vinculados")
-    ws.Range("C21").Value = modJson.ObterNumero(ind, "pendencias_abertas")
-    ws.Range("C23").Value = modJson.ObterNumero(ind, "materiais_base")
-    ws.Range("C24").Value = modJson.ObterNumero(ind, "composicoes_referencia")
+    ws.Range("C12").Value = modJson.ObterNumero(ind, "servicos_empresa")
+    ws.Range("C13").Value = modJson.ObterNumero(ind, "servicos_vinculados")
+    ws.Range("C14").Value = modJson.ObterNumero(ind, "servicos_pendentes")
+    ws.Range("C16").Value = modJson.ObterNumero(ind, "composicoes_proprias")
+    ws.Range("C17").Value = modJson.ObterNumero(ind, "composicoes_completas")
+    ws.Range("C18").Value = modJson.ObterNumero(ind, "composicoes_pendentes")
+    ws.Range("C19").Value = modJson.ObterNumero(ind, "composicoes_revisar")
+    ws.Range("C21").Value = modJson.ObterNumero(ind, "materiais_vinculados")
+    ws.Range("C22").Value = modJson.ObterNumero(ind, "equipamentos_vinculados")
+    ws.Range("C23").Value = modJson.ObterNumero(ind, "pendencias_abertas")
+    ws.Range("C25").Value = modJson.ObterNumero(ind, "materiais_base")
+    ws.Range("C26").Value = modJson.ObterNumero(ind, "composicoes_referencia")
 
     ' Bases carregadas, com data-base e como cada uma foi identificada.
-    linha = 28
+    linha = 30
     ws.Range(ws.Cells(linha, 2), ws.Cells(linha + 8, 6)).ClearContents
     modUtils.EscreverCabecalho ws, linha, _
         Array("", "BASE", "ARQUIVO", "DATA-BASE", "REGISTROS", "IDENTIFICADA POR")
@@ -65,6 +65,12 @@ Public Sub AtualizarInicio()
 End Sub
 
 '------------------------------------------------------------ botoes
+
+Public Sub BotaoAssistente()
+    ' A porta de entrada do sistema. Conduz o usuario do servico ate a
+    ' composicao gravada, explicando cada passo.
+    modAssistente.Abrir
+End Sub
 
 Public Sub BotaoIniciarCorrespondencia()
     modUtils.IrPara modServices.ABA_SERVICOS
@@ -109,4 +115,8 @@ Public Sub Auto_Open()
     On Error Resume Next
     modUtils.IrPara ABA_INICIO
     AtualizarInicio
+End Sub
+
+Public Sub BotaoAjuda()
+    modUtils.IrPara "AJUDA"
 End Sub

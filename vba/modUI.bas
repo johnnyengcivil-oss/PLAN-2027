@@ -71,19 +71,52 @@ Private Sub Botao(ByVal ws As Worksheet, ByVal esquerda As Double, _
 End Sub
 
 Private Sub CriarBotoesInicio()
-    Dim ws As Worksheet
+    ' O assistente vem primeiro e maior de proposito: e o caminho que o
+    ' usuario deve seguir. O resto sao ferramentas de apoio.
+    Dim ws As Worksheet, b As Object
     Set ws = modUtils.Aba(modMain.ABA_INICIO)
     If ws Is Nothing Then Exit Sub
-    Botao ws, 420, 120, 190, "INICIAR CORRESPONDENCIA", "modMain.BotaoIniciarCorrespondencia"
-    Botao ws, 420, 152, 190, "REVISAR PENDENCIAS", "modMain.BotaoRevisarPendencias"
-    Botao ws, 420, 184, 190, "BANCO DE COMPOSICOES", "modMain.BotaoBancoComposicoes"
-    Botao ws, 420, 216, 190, "ATUALIZAR BASES", "modMain.BotaoAtualizarBases"
-    Botao ws, 420, 248, 190, "CONFIGURACOES", "modMain.BotaoConfiguracoes"
-    Botao ws, 420, 280, 190, "LOG", "modMain.BotaoLog"
-    Botao ws, 420, 312, 190, "ANALISAR EM LOTE", "modMain.BotaoAnalisarLote"
-    Botao ws, 420, 344, 190, "TESTAR MOTOR", "modMain.BotaoTestarMotor"
-    Botao ws, 420, 376, 190, "DIAGNOSTICO DO MOTOR", "modPythonBridge.MostrarDiagnostico"
+
+    Set b = BotaoGrande(ws, 420, 108, 260, 44, _
+                        "COMECAR - ASSISTENTE DE COMPOSICAO", _
+                        "modMain.BotaoAssistente")
+
+    Botao ws, 420, 160, 128, "Pendencias", "modMain.BotaoRevisarPendencias"
+    Botao ws, 552, 160, 128, "Banco de composicoes", "modMain.BotaoBancoComposicoes"
+    Botao ws, 420, 192, 128, "Lista de servicos", "modMain.BotaoIniciarCorrespondencia"
+    Botao ws, 552, 192, 128, "Analisar em lote", "modMain.BotaoAnalisarLote"
+    Botao ws, 420, 224, 128, "Atualizar bases", "modMain.BotaoAtualizarBases"
+    Botao ws, 552, 224, 128, "Configuracoes", "modMain.BotaoConfiguracoes"
+    Botao ws, 420, 256, 128, "Como usar", "modMain.BotaoAjuda"
+    Botao ws, 552, 256, 128, "Log de auditoria", "modMain.BotaoLog"
+    Botao ws, 420, 288, 128, "Testar motor", "modMain.BotaoTestarMotor"
+    Botao ws, 552, 288, 128, "Diagnostico", "modPythonBridge.MostrarDiagnostico"
 End Sub
+
+Private Function BotaoGrande(ByVal ws As Worksheet, ByVal esquerda As Double, _
+                             ByVal topo As Double, ByVal largura As Double, _
+                             ByVal altura As Double, ByVal texto As String, _
+                             ByVal macro As String) As Object
+    Const xlButtonControl As Long = 0
+    Dim sh As Shape
+    On Error Resume Next
+    Set sh = ws.Shapes.AddFormControl(xlButtonControl, esquerda, topo, largura, altura)
+    If sh Is Nothing Then Exit Function
+    sh.OnAction = macro
+    sh.Name = "btn" & Replace(macro, ".", "_")
+    sh.TextFrame.Characters.Text = texto
+    If Err.Number <> 0 Then
+        Err.Clear
+        sh.TextFrame2.TextRange.Text = texto
+        Err.Clear
+    End If
+    sh.TextFrame.Characters.Font.Size = 11
+    sh.TextFrame.Characters.Font.Bold = True
+    sh.TextFrame.HorizontalAlignment = xlHAlignCenter
+    Err.Clear
+    On Error GoTo 0
+    Set BotaoGrande = sh
+End Function
 
 Private Sub CriarBotoesServicos()
     Dim ws As Worksheet
@@ -91,6 +124,7 @@ Private Sub CriarBotoesServicos()
     If ws Is Nothing Then Exit Sub
     Botao ws, 460, 12, 150, "APLICAR FILTROS", "modServices.CarregarServicos"
     Botao ws, 460, 44, 150, "BUSCAR CORRESPONDENCIA", "modServices.SelecionarServicoDaLinha"
+    Botao ws, 780, 12, 150, "ABRIR ASSISTENTE", "modMain.BotaoAssistente"
     Botao ws, 620, 12, 150, "ANALISAR EM LOTE", "modServices.AnalisarTodosOsServicos"
     Botao ws, 620, 44, 150, "VOLTAR AO INICIO", "modMain.Auto_Open"
 End Sub

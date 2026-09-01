@@ -99,21 +99,53 @@ def main() -> int:
         print(f"  {estado:<5} {caminho.name:<24} {n:>4} linhas")
         erros += problemas
 
-    # Toda macro referenciada por um botão precisa existir como Public.
+    # Toda rotina referenciada por nome precisa existir como Public.
+    #
+    # Cobre dois casos que só falhariam em execução: a macro de um botão
+    # (OnAction, string) e as chamadas dentro do código que o
+    # modFormBuilder injeta nos formulários — que o compilador do VBA só
+    # vê depois que o formulário é criado.
     publicas, alvos = set(), {}
     for caminho in arquivos:
         txt = caminho.read_bytes().decode("utf-8")
         for m in re.finditer(r"^Public (?:Sub|Function) (\w+)", txt, re.M):
             publicas.add(f"{caminho.stem}.{m.group(1)}")
-        for m in re.finditer(r'"(mod\w+\.\w+)"', txt):
-            alvos[m.group(1)] = caminho.name
+    modulos = {c.stem for c in arquivos}
+    for caminho in arquivos:
+        txt = caminho.read_bytes().decode("utf-8")
+        for literal in re.findall(r'"([^"\n]*)"', txt):
+            for m in re.finditer(r"\b(mod\w+)\.(\w+)\b", literal):
+                if m.group(1) in modulos:
+                    alvos[f"{m.group(1)}.{m.group(2)}"] = caminho.name
     faltando = {a: f for a, f in alvos.items() if a not in publicas}
-    print(f"\n  Macros referenciadas por botões: {len(alvos)}")
+    print(f"\n  Rotinas referenciadas por nome: {len(alvos)}")
     if faltando:
-        for macro, arquivo in faltando.items():
-            erros.append(f"{arquivo}: macro inexistente {macro}")
+        for macro, arquivo in sorted(faltando.items()):
+            erros.append(f"{arquivo}: rotina inexistente {macro}")
     else:
         print("  Todas existem como Public.")
+
+    # Controles usados pela lógica precisam ser criados pelo construtor.
+    construtor = (PASTA / "modFormBuilder.bas")
+    if construtor.exists():
+        txt = construtor.read_bytes().decode("utf-8")
+        criados = set(re.findall(r'"(lst\w+|txt\w+|cbo\w+|chk\w+|lbl\w+|btn\w+|fra\w+)"',
+                                 txt))
+        usados = set()
+        for nome in ("modAssistente.bas", "modEscolherItem.bas"):
+            arq = PASTA / nome
+            if not arq.exists():
+                continue
+            corpo = arq.read_bytes().decode("utf-8")
+            usados |= set(re.findall(
+                r"\bf\.(lst\w+|txt\w+|cbo\w+|chk\w+|lbl\w+|btn\w+|fra\w+)", corpo))
+        ausentes = sorted(usados - criados)
+        print(f"  Controles usados pela lógica: {len(usados)}")
+        if ausentes:
+            for c in ausentes:
+                erros.append(f"modFormBuilder.bas: controle não criado: {c}")
+        else:
+            print("  Todos são criados pelo construtor.")
 
     # Arquivos do Windows precisam de CRLF.
     for caminho in arquivos:

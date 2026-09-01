@@ -110,31 +110,45 @@ def aba_inicio(wb: Workbook):
                  "a partir das referências EDIF/INFRA")
     larguras(ws, {1: 3, 2: 34, 3: 18, 4: 20, 5: 14, 6: 46})
 
-    secao(ws, 4, "SITUAÇÃO DO MOTOR")
-    ws.cell(row=6, column=2, value="Motor Python").font = ROTULO
-    ws.cell(row=7, column=2, value="Backend semântico").font = ROTULO
+    # Instrução principal, antes de qualquer indicador: quem abre o
+    # arquivo pela primeira vez precisa saber o que fazer, não quantos
+    # registros existem.
+    c = ws.cell(row=4, column=2,
+                value="Clique em COMEÇAR, à direita  →")
+    c.font = Font(name="Segoe UI", size=13, bold=True, color=AZUL)
+    c = ws.cell(row=5, column=2,
+                value="O assistente conduz você em 4 passos: escolher o serviço, "
+                      "achar a referência EDIF/INFRA,")
+    c.font = AJUDA
+    c = ws.cell(row=6, column=2,
+                value="conferir os insumos e gravar. Nada é gravado sem você mandar.")
+    c.font = AJUDA
 
-    secao(ws, 9, "SERVIÇOS DA EMPRESA")
-    indicador(ws, 10, "Serviços cadastrados")
-    indicador(ws, 11, "Serviços vinculados")
-    indicador(ws, 12, "Serviços pendentes")
+    secao(ws, 7, "SITUAÇÃO DO MOTOR")
+    ws.cell(row=8, column=2, value="Motor Python").font = ROTULO
+    ws.cell(row=9, column=2, value="Backend semântico").font = ROTULO
 
-    secao(ws, 13, "COMPOSIÇÕES PRÓPRIAS")
-    indicador(ws, 14, "Composições próprias")
-    indicador(ws, 15, "  Completas")
-    indicador(ws, 16, "  Pendentes")
-    indicador(ws, 17, "  A revisar")
+    secao(ws, 11, "SERVIÇOS DA EMPRESA")
+    indicador(ws, 12, "Serviços cadastrados")
+    indicador(ws, 13, "Serviços vinculados")
+    indicador(ws, 14, "Serviços pendentes")
 
-    secao(ws, 18, "VÍNCULOS E PENDÊNCIAS")
-    indicador(ws, 19, "Materiais vinculados")
-    indicador(ws, 20, "Equipamentos vinculados")
-    indicador(ws, 21, "Pendências abertas")
+    secao(ws, 15, "COMPOSIÇÕES PRÓPRIAS")
+    indicador(ws, 16, "Composições próprias")
+    indicador(ws, 17, "  Completas")
+    indicador(ws, 18, "  Pendentes")
+    indicador(ws, 19, "  A revisar")
 
-    secao(ws, 22, "BASES CARREGADAS")
-    indicador(ws, 23, "Materiais na base interna")
-    indicador(ws, 24, "Composições de referência")
+    secao(ws, 20, "VÍNCULOS E PENDÊNCIAS")
+    indicador(ws, 21, "Materiais vinculados")
+    indicador(ws, 22, "Equipamentos vinculados")
+    indicador(ws, 23, "Pendências abertas")
 
-    ws.cell(row=26, column=2,
+    secao(ws, 24, "BASES CARREGADAS")
+    indicador(ws, 25, "Materiais na base interna")
+    indicador(ws, 26, "Composições de referência")
+
+    ws.cell(row=28, column=2,
             value="As bases originais são abertas SOMENTE PARA LEITURA. "
                   "O sistema nunca grava, converte ou renomeia esses arquivos."
             ).font = AJUDA
@@ -274,21 +288,34 @@ def aba_ajuda(wb: Workbook):
     faixa_titulo(ws, "COMO USAR", "Fluxo de trabalho e o que o sistema garante")
     larguras(ws, {1: 4, 2: 116})
     passos = [
-        ("FLUXO DE TRABALHO", ""),
-        ("1", "INÍCIO → ATUALIZAR BASES. Lê os cinco arquivos originais "
-              "(somente leitura) e carrega o banco local."),
-        ("2", "SERVIÇOS → escolha um serviço interno e clique BUSCAR CORRESPONDÊNCIA."),
-        ("3", "CORRESPONDÊNCIA → avalie os candidatos EDIF/INFRA com o score "
-              "decomposto e clique ESCOLHER no que julgar correto."),
-        ("4", "COMPOSIÇÃO → o sistema abre a composição da referência já com as "
-              "auxiliares expandidas, hierárquica e consolidada."),
-        ("5", "MONTAR COMPOSIÇÃO PRÓPRIA → a mão de obra interna entra com "
-              "coeficiente 1,0000 e os materiais/equipamentos vêm da referência."),
-        ("6", "Para cada insumo, use SUGESTÕES PARA O INSUMO e confirme o "
-              "equivalente na base interna da empresa."),
-        ("7", "SALVAR COMPOSIÇÃO → grava a composição própria e transforma as "
-              "escolhas em vínculos validados, reaproveitados daí em diante."),
-        ("8", "PENDÊNCIAS → resolva o que ficou em aberto, sem bloquear o resto."),
+        ("O CAMINHO NORMAL — USE O ASSISTENTE", ""),
+        ("", "Na aba INÍCIO, clique em COMEÇAR — ASSISTENTE DE COMPOSIÇÃO. "
+             "Ele conduz tudo em quatro passos, explicando cada um. As abas "
+             "abaixo continuam disponíveis, mas você não precisa delas para "
+             "o trabalho do dia a dia."),
+        ("1", "ESCOLHER O SERVIÇO — digite parte do nome para filtrar os 949 "
+              "serviços. Duplo clique já avança."),
+        ("2", "ESCOLHER A REFERÊNCIA — o sistema mostra os candidatos EDIF e "
+              "INFRA ordenados por semelhança, e o painel da direita explica "
+              "cada score em barras: texto, sentido, termos-chave, unidade e "
+              "técnico, com o que pesou a favor e contra."),
+        ("3", "CONFERIR OS INSUMOS — clique num insumo e edite abaixo: trocar "
+              "o item da empresa, mudar o coeficiente (botões −10% e +10%, ou "
+              "digite direto) ou deixá-lo fora do custo. O total é recalculado "
+              "a cada mudança."),
+        ("4", "GRAVAR — a composição entra no banco próprio e os itens que você "
+              "escolheu viram vínculos validados, sugeridos automaticamente nas "
+              "próximas composições."),
+        ("", ""),
+        ("AS ABAS, PARA CONSULTA E CASOS ESPECIAIS", ""),
+        ("SERVIÇOS", "lista completa, com filtros e análise em lote"),
+        ("CORRESPONDÊNCIA", "a busca do passo 2, em formato de planilha"),
+        ("COMPOSIÇÃO", "a composição de referência expandida, hierárquica e "
+                       "consolidada, com o caminho de cada auxiliar"),
+        ("BANCO_COMPOSIÇÕES", "tudo o que já foi gravado, com custos e situação"),
+        ("PENDÊNCIAS", "o que ficou em aberto, das mais críticas para as menos"),
+        ("CONFIGURAÇÃO", "identificação das bases e política de preço"),
+        ("LOG", "quem fez o quê, quando, com qual score"),
         ("", ""),
         ("O QUE O SISTEMA GARANTE", ""),
         ("•", "As bases originais nunca são alteradas: leitura pura, "
@@ -300,7 +327,7 @@ def aba_ajuda(wb: Workbook):
               "registrada para rastreabilidade."),
         ("•", "Conversões de unidade são determinísticas. Quando dependem do "
               "produto e não podem ser deduzidas, viram pendência em vez de "
-              "chute."),
+              "chute — e você pode digitar o coeficiente na mão."),
         ("•", "Cada item guarda código, descrição, unidade e coeficiente dos "
               "dois lados, o fator de conversão, o score, a data e o usuário."),
         ("•", "Um insumo problemático não descarta a composição: os demais são "

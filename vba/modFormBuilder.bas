@@ -32,16 +32,72 @@ Private Const COR_TEXTO As Long = 3355443
 
 Public Sub CriarFormularios()
     ' Chamada pelo instalador. Recria os dois formularios do zero.
-    On Error GoTo Falhou
+    '
+    ' PROPAGA o erro de proposito. A versao anterior engolia a falha num
+    ' Debug.Print, e o instalador anunciava sucesso enquanto o formulario
+    ' ficava vazio - o pior dos dois mundos, porque o problema so aparecia
+    ' na cara do usuario, sem pista nenhuma.
     RemoverSeExistir "frmAssistente"
     RemoverSeExistir "frmEscolherItem"
     ConstruirAssistente
     ConstruirEscolherItem
-    Exit Sub
-Falhou:
-    ' Nao interrompe a instalacao: as abas continuam funcionando.
-    Debug.Print "modFormBuilder: " & Err.Description
+    ConferirConstrucao
 End Sub
+
+Private Sub ConferirConstrucao()
+    ' Um formulario existir nao significa que ficou pronto. Conferir a
+    ' contagem de controles pega a construcao interrompida no meio.
+    Dim faltando As String
+    faltando = ""
+    If ContarControles("frmAssistente") < 20 Then
+        faltando = faltando & "frmAssistente (" & _
+                   ContarControles("frmAssistente") & " controles) "
+    End If
+    If ContarControles("frmEscolherItem") < 8 Then
+        faltando = faltando & "frmEscolherItem (" & _
+                   ContarControles("frmEscolherItem") & " controles) "
+    End If
+    If Len(faltando) > 0 Then
+        Err.Raise vbObjectError + 513, "modFormBuilder", _
+            "Formulario construido incompleto: " & faltando
+    End If
+End Sub
+
+Public Function ContarControles(ByVal nome As String) As Long
+    Dim comp As Object
+    On Error Resume Next
+    Set comp = ThisWorkbook.VBProject.VBComponents(nome)
+    If comp Is Nothing Then
+        ContarControles = -1
+    Else
+        ContarControles = comp.Designer.Controls.Count
+    End If
+    On Error GoTo 0
+End Function
+
+Public Sub Diagnostico()
+    ' Chamavel pela Verificacao Imediata (Ctrl+G) ou por botao.
+    Dim sb As String
+    sb = "FORMULARIOS DO SISTEMA" & vbCrLf & vbCrLf
+    sb = sb & "frmAssistente:    " & DescreverForm("frmAssistente", 20) & vbCrLf
+    sb = sb & "frmEscolherItem:  " & DescreverForm("frmEscolherItem", 8) & vbCrLf & vbCrLf
+    sb = sb & "Se algum estiver ausente ou incompleto, feche o Excel e rode" & vbCrLf
+    sb = sb & "MONTAR_PLANILHA.bat de novo na pasta do sistema."
+    MsgBox sb, vbInformation, "Diagnostico dos formularios"
+End Sub
+
+Private Function DescreverForm(ByVal nome As String, ByVal minimo As Long) As String
+    Dim n As Long
+    n = ContarControles(nome)
+    If n < 0 Then
+        DescreverForm = "NAO EXISTE"
+    ElseIf n < minimo Then
+        DescreverForm = "INCOMPLETO - so " & n & " controles (esperado " & _
+                        minimo & " ou mais)"
+    Else
+        DescreverForm = "ok, " & n & " controles"
+    End If
+End Function
 
 Public Function FormulariosExistem() As Boolean
     Dim comp As Object
@@ -65,15 +121,17 @@ End Sub
 
 Private Function NovoFormulario(ByVal nome As String, ByVal titulo As String, _
                                 ByVal larg As Single, ByVal alt As Single) As Object
+    ' ATENCAO: as propriedades de projeto ficam em VBComponent.Properties,
+    ' NAO em Designer.Properties. O Designer de um UserForm e o proprio
+    ' formulario, que nao tem a colecao Properties - usa-la ali gera erro
+    ' 438 logo apos o rename, deixando um formulario com o nome correto,
+    ' titulo padrao "UserForm1" e nenhum controle.
     Dim comp As Object
     Set comp = ThisWorkbook.VBProject.VBComponents.Add(TIPO_FORMULARIO)
     comp.Name = nome
-    With comp.Designer
-        .Properties("Caption") = titulo
-        .Properties("Width") = larg
-        .Properties("Height") = alt
-        .Properties("BackColor") = COR_FUNDO
-    End With
+    comp.Properties("Caption") = titulo
+    comp.Properties("Width") = larg
+    comp.Properties("Height") = alt
     Set NovoFormulario = comp
 End Function
 

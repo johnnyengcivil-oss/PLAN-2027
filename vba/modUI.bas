@@ -90,7 +90,8 @@ Private Sub CriarBotoesInicio()
     Botao ws, 420, 256, 128, "Como usar", "modMain.BotaoAjuda"
     Botao ws, 552, 256, 128, "Log de auditoria", "modMain.BotaoLog"
     Botao ws, 420, 288, 128, "Testar motor", "modMain.BotaoTestarMotor"
-    Botao ws, 552, 288, 128, "Diagnostico", "modPythonBridge.MostrarDiagnostico"
+    Botao ws, 552, 288, 128, "Diagnostico motor", "modPythonBridge.MostrarDiagnostico"
+    Botao ws, 420, 320, 260, "Diagnostico dos formularios", "modFormBuilder.Diagnostico"
 End Sub
 
 Private Function BotaoGrande(ByVal ws As Worksheet, ByVal esquerda As Double, _

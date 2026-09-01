@@ -39,22 +39,50 @@ Private mCarregando As Boolean
 '==============================================================================
 
 Public Sub Abrir()
-    ' Ponto de entrada. Usa late binding de proposito: se os formularios
-    ' nao tiverem sido criados, o codigo ainda compila e o sistema cai
-    ' para a interface das abas.
+    ' Ponto de entrada. Usa late binding de proposito: se o formulario nao
+    ' existir, o codigo ainda compila e o sistema cai para as abas.
     Dim f As Object
     On Error GoTo SemFormulario
+
     Set f = VBA.UserForms.Add("frmAssistente")
+
+    ' Existir nao basta: uma construcao interrompida deixa o formulario
+    ' com o nome certo e nenhum controle. Sem esta conferencia, o usuario
+    ' recebe uma janela cinza vazia e nenhuma explicacao.
+    If f.Controls.Count < 20 Then
+        Unload f
+        GoTo Incompleto
+    End If
+
     f.Show
     Exit Sub
+
+Incompleto:
+    modUtils.AvisarErro _
+        "O assistente esta instalado pela metade: a janela existe, mas os " & _
+        "campos dela nao foram criados." & vbCrLf & vbCrLf & _
+        "Para corrigir:" & vbCrLf & _
+        "  1. Feche o Excel" & vbCrLf & _
+        "  2. Na pasta do sistema, de duplo clique em MONTAR_PLANILHA.bat" & vbCrLf & _
+        "  3. Autorize quando ele pedir" & vbCrLf & vbCrLf & _
+        "Enquanto isso, use as abas - elas fazem o mesmo trabalho.", _
+        "Assistente incompleto"
+    UsarAbas
+    Exit Sub
+
 SemFormulario:
     If modUtils.Confirmar( _
-        "O assistente em janela nao esta disponivel nesta planilha." & vbCrLf & vbCrLf & _
-        "Isso acontece quando os formularios nao foram criados na " & _
-        "instalacao. Deseja usar a versao em abas?", "Assistente") Then
-        modServices.CarregarServicos
-        modUtils.IrPara modServices.ABA_SERVICOS
+        "O assistente em janela nao foi instalado nesta planilha." & vbCrLf & vbCrLf & _
+        "Para instala-lo, feche o Excel e rode MONTAR_PLANILHA.bat na pasta " & _
+        "do sistema." & vbCrLf & vbCrLf & _
+        "Deseja usar a versao em abas agora?", "Assistente") Then
+        UsarAbas
     End If
+End Sub
+
+Private Sub UsarAbas()
+    modServices.CarregarServicos
+    modUtils.IrPara modServices.ABA_SERVICOS
 End Sub
 
 Public Sub Iniciar(ByVal f As Object)

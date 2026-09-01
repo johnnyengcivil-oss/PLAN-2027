@@ -147,6 +147,27 @@ def main() -> int:
         else:
             print("  Todos são criados pelo construtor.")
 
+    # Usos da API do VBIDE que compilam mas falham em execução.
+    #
+    # O caso que motivou esta checagem: Designer.Properties parece
+    # razoável e passa no compilador, mas Properties pertence ao
+    # VBComponent — o Designer de um UserForm é o próprio formulário.
+    # O erro 438 acontecia depois do rename, deixando um formulário com o
+    # nome certo, título padrão e nenhum controle.
+    armadilhas = [
+        (r"\.Designer\s*\n?\s*\.Properties", 
+         "Designer.Properties não existe — use VBComponent.Properties"),
+        (r"With\s+\w+\.Designer\b[^\n]*\n(?:[^\n]*\n){0,6}?\s*\.Properties",
+         "Designer.Properties dentro de With — use VBComponent.Properties"),
+        (r"VBComponents\.Add\([^)]*\)[^\n]*\n\s*\w+\.Designer\.Properties",
+         "Designer.Properties logo após Add — use VBComponent.Properties"),
+    ]
+    for caminho in arquivos:
+        txt = caminho.read_bytes().decode("utf-8").replace("\r\n", "\n")
+        for padrao, motivo in armadilhas:
+            if re.search(padrao, txt):
+                erros.append(f"{caminho.name}: {motivo}")
+
     # Arquivos do Windows precisam de CRLF.
     for caminho in arquivos:
         if b"\r\n" not in caminho.read_bytes():

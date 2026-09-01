@@ -95,7 +95,17 @@ If Err.Number <> 0 Then
     WScript.Echo "  O sistema continua funcionando pelas abas da planilha."
     Err.Clear
 Else
-    WScript.Echo "  formularios criados"
+    Dim nCtl
+    nCtl = 0
+    nCtl = excel.Run("modFormBuilder.ContarControles", "frmAssistente")
+    If Err.Number <> 0 Or nCtl < 20 Then
+        WScript.Echo ""
+        WScript.Echo "  AVISO: o assistente ficou incompleto (" & nCtl & " controles)."
+        WScript.Echo "  O sistema continua funcionando pelas abas da planilha."
+        Err.Clear
+    Else
+        WScript.Echo "  formularios criados (" & nCtl & " controles no assistente)"
+    End If
 End If
 On Error GoTo 0
 

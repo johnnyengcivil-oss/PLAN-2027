@@ -44,7 +44,11 @@ def main() -> int:
     print("VERIFICAÇÃO DA INSTALAÇÃO — BANCO PRÓPRIO DE COMPOSIÇÕES")
     print("=" * 72)
     print(f"Pasta do sistema : {RAIZ}")
-    print(f"Python           : {sys.version.split()[0]} ({platform.system()})")
+    portatil = (RAIZ / "python-portatil") in Path(sys.prefix).parents or \
+               Path(sys.prefix).name == "python-portatil"
+    print(f"Python           : {sys.version.split()[0]} ({platform.system()})"
+          + ("  [portátil, incluso no pacote]" if portatil else ""))
+    print(f"Interpretador    : {sys.executable}")
 
     # ------------------------------------------------------------ 1
     secao("1", "PYTHON E DEPENDÊNCIAS")

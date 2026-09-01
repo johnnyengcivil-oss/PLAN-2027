@@ -63,14 +63,25 @@ Todos os caminhos derivam de `ThisWorkbook.Path`. Nada depende de
 
 ### Não tenho Python — e agora?
 
+**No pacote entregue ao usuário, o Python já vai dentro**, em
+`python-portatil\`, com as bibliotecas instaladas nele. Não há nada a
+fazer. Esta seção vale para quem monta o pacote a partir do repositório.
+
 Duas saídas. A primeira **não instala nada** no Windows.
 
 **Portátil (recomendada).** Baixe
 [`python-3.11.9-embed-amd64.zip`](https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip)
 (~10 MB) e extraia o conteúdo numa pasta `python-portatil\` criada ao lado
 do `COMECAR_AQUI.bat`, de modo a existir `python-portatil\python.exe`.
-Os scripts detectam e usam. Não mexe no registro, não pede administrador,
-e desinstalar é apagar a pasta.
+Os scripts detectam e usam — inclusive se o Windows tiver criado uma
+subpasta ao extrair (`python-portatil\python-3.11.9-embed-amd64\`), erro
+comum que o `_localizar_python.bat` trata. Não mexe no registro, não pede
+administrador, e desinstalar é apagar a pasta.
+
+Depois de extrair, rode `preparar_libs.py` com ele uma vez: o Python
+embeddable vem com o `site-packages` **desligado** por um arquivo `._pth`,
+e é esse script que corrige o arquivo e instala as bibliotecas de `libs\`
+sem precisar de pip.
 
 **Instalar normalmente.** [python.org/downloads](https://www.python.org/downloads/),
 marcando **"Add Python to PATH"** na primeira tela — vem desmarcada, e é a

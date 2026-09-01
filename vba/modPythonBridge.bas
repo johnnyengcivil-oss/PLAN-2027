@@ -54,40 +54,75 @@ Public Function CaminhoMotor() As String
 End Function
 
 Public Function LocalizarScript() As String
-    ' Devolve o caminho completo de python\main.py, ou vazio.
-    Dim fso As Object, base As String, pasta As Object, subPasta As Object
-    Set fso = CreateObject("Scripting.FileSystemObject")
+    ' Caminho completo de python\main.py, ou vazio.
+    '
+    ' Procura em varios lugares de proposito: o .xlsm pode ter sido movido,
+    ' ou o ZIP extraido criando uma pasta a mais. Ordem: a pasta do
+    ' arquivo, dois niveis acima e dois niveis de subpastas.
+    Dim base As String
     base = RaizSistema()
 
-    If fso.FileExists(base & "\python\main.py") Then
-        LocalizarScript = base & "\python\main.py"
-        Exit Function
-    End If
+    LocalizarScript = ProcurarEm(base)
+    If Len(LocalizarScript) > 0 Then Exit Function
 
-    ' Um nivel acima: caso o .xlsm tenha sido movido para uma subpasta.
-    If fso.FolderExists(base) Then
-        Dim pai As String
-        pai = fso.GetParentFolderName(base)
-        If Len(pai) > 0 Then
-            If fso.FileExists(pai & "\python\main.py") Then
-                LocalizarScript = pai & "\python\main.py"
-                Exit Function
-            End If
+    Dim fso As Object, pai As String, avo As String
+    Set fso = CreateObject("Scripting.FileSystemObject")
+
+    pai = PastaPai(base)
+    If Len(pai) > 0 Then
+        LocalizarScript = ProcurarEm(pai)
+        If Len(LocalizarScript) > 0 Then Exit Function
+        avo = PastaPai(pai)
+        If Len(avo) > 0 Then
+            LocalizarScript = ProcurarEm(avo)
+            If Len(LocalizarScript) > 0 Then Exit Function
         End If
     End If
 
-    ' Uma subpasta abaixo: ZIP extraido criando pasta com o nome do arquivo.
-    If fso.FolderExists(base) Then
-        Set pasta = fso.GetFolder(base)
-        For Each subPasta In pasta.SubFolders
-            If fso.FileExists(subPasta.Path & "\python\main.py") Then
-                LocalizarScript = subPasta.Path & "\python\main.py"
-                Exit Function
-            End If
-        Next subPasta
-    End If
+    LocalizarScript = ProcurarNasSubpastas(base, 2)
+End Function
 
-    LocalizarScript = ""
+Private Function ProcurarEm(ByVal pasta As String) As String
+    Dim fso As Object
+    If Len(pasta) = 0 Then Exit Function
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    If fso.FileExists(pasta & "\python\main.py") Then
+        ProcurarEm = pasta & "\python\main.py"
+    End If
+End Function
+
+Private Function ProcurarNasSubpastas(ByVal pasta As String, _
+                                      ByVal profundidade As Long) As String
+    Dim fso As Object, subPasta As Object, achado As String
+    If profundidade <= 0 Or Len(pasta) = 0 Then Exit Function
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    If Not fso.FolderExists(pasta) Then Exit Function
+
+    On Error Resume Next
+    For Each subPasta In fso.GetFolder(pasta).SubFolders
+        achado = ProcurarEm(subPasta.Path)
+        If Len(achado) > 0 Then
+            ProcurarNasSubpastas = achado
+            Exit Function
+        End If
+    Next subPasta
+    For Each subPasta In fso.GetFolder(pasta).SubFolders
+        achado = ProcurarNasSubpastas(subPasta.Path, profundidade - 1)
+        If Len(achado) > 0 Then
+            ProcurarNasSubpastas = achado
+            Exit Function
+        End If
+    Next subPasta
+    On Error GoTo 0
+End Function
+
+Private Function PastaPai(ByVal pasta As String) As String
+    Dim fso As Object
+    If Len(pasta) = 0 Then Exit Function
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    On Error Resume Next
+    PastaPai = fso.GetParentFolderName(pasta)
+    On Error GoTo 0
 End Function
 
 Public Function ExecutavelPython() As String
@@ -176,8 +211,12 @@ Public Function Chamar(ByVal pedidoJson As String, _
               " --resposta """ & arqResposta & """" & _
               " --raiz """ & PastaDoSistema() & """"
 
+    ' Executa o interpretador DIRETAMENTE, sem "cmd /c". O cmd, ao receber
+    ' um comando que comeca com aspas, remove o primeiro e o ultimo
+    ' caractere de aspas da linha inteira, o que corrompia o ultimo
+    ' argumento. WScript.Shell.Run trata caminhos entre aspas sozinho.
     Application.StatusBar = "Processando no motor Python..."
-    codigo = wsh.Run("cmd /c " & comando, 0, True)   ' 0 = janela oculta, True = aguarda
+    codigo = wsh.Run(comando, 0, True)               ' 0 = oculto, True = aguarda
     Application.StatusBar = False
 
     If Not fso.FileExists(arqResposta) Then
@@ -299,11 +338,40 @@ Public Function DiagnosticoMotor() As String
     sb = sb & vbCrLf & "Interpretador Python:" & vbCrLf
     sb = sb & "  " & Marca(fso, base & "\python-portatil\python.exe") & vbCrLf
     sb = sb & "  " & Marca(fso, base & "\.venv\Scripts\python.exe") & vbCrLf
+    sb = sb & vbCrLf & "Conteudo da pasta do Excel:" & vbCrLf
+    sb = sb & ListarPasta(fso, base)
     sb = sb & vbCrLf & _
          "O arquivo Sistema_Composicoes.xlsm precisa ficar na MESMA pasta" & vbCrLf & _
          "que as pastas python, vba e BASES. Se ele foi movido, devolva-o" & vbCrLf & _
          "para junto delas e reabra."
     DiagnosticoMotor = sb
+End Function
+
+Private Function ListarPasta(ByVal fso As Object, ByVal pasta As String) As String
+    ' Mostrar o que HA na pasta costuma revelar o problema mais depressa
+    ' do que a lista do que falta.
+    Dim item As Object, sb As String, n As Long
+    On Error Resume Next
+    If Not fso.FolderExists(pasta) Then
+        ListarPasta = "  (a pasta nao existe)" & vbCrLf
+        Exit Function
+    End If
+    For Each item In fso.GetFolder(pasta).SubFolders
+        sb = sb & "  [pasta] " & item.Name & vbCrLf
+        n = n + 1
+        If n > 12 Then Exit For
+    Next item
+    n = 0
+    For Each item In fso.GetFolder(pasta).Files
+        sb = sb & "  " & item.Name & vbCrLf
+        n = n + 1
+        If n > 12 Then
+            sb = sb & "  ..." & vbCrLf
+            Exit For
+        End If
+    Next item
+    On Error GoTo 0
+    ListarPasta = sb
 End Function
 
 Private Function Marca(ByVal fso As Object, ByVal caminho As String) As String

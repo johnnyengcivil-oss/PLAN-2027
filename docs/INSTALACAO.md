@@ -57,13 +57,32 @@ Todos os caminhos derivam de `ThisWorkbook.Path`. Nada depende de
 
 ## 2. Python
 
-Durante o desenvolvimento, com Python 3.10+ instalado:
+### Caminho fácil — duplo clique
+
+Dê **duplo clique em `instalar.bat`**. Ele procura o Python, cria o
+ambiente isolado, instala as bibliotecas e roda a verificação, mostrando o
+que falta. Não é preciso abrir o Prompt de Comando nem digitar nada, e não
+exige privilégio de administrador.
+
+Se o Python não estiver instalado, o script diz isso e indica onde baixar.
+Ao instalar, **marque "Add Python to PATH"** na primeira tela.
+
+Há ainda `verificar.bat` (reconferir a instalação) e `prova.bat` (rodar a
+prova funcional), ambos por duplo clique.
+
+### Caminho manual — pelo Prompt de Comando
+
+Com Python 3.10+ instalado:
 
 ```bat
 cd C:\BANCO_COMPOSICOES
 python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
 ```
+
+Se `python` não for reconhecido, use `py -3` no lugar — é o lançador do
+Windows, e evita o atalho da Microsoft Store que abre a loja em vez de
+executar o Python.
 
 O `modPythonBridge` procura o interpretador nesta ordem:
 

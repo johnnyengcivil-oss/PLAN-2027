@@ -1,0 +1,11 @@
+# Scripts do Windows precisam de CRLF para não falharem em blocos e rótulos.
+*.bat text eol=crlf
+*.vbs text eol=crlf
+
+# Fontes VBA são importadas pelo editor do Excel, que espera CRLF.
+*.bas text eol=crlf
+
+# O restante fica com LF.
+*.py  text eol=lf
+*.md  text eol=lf
+*.txt text eol=lf

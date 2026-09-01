@@ -44,6 +44,12 @@ SERVIÇO DE MÃO DE OBRA DA EMPRESA
 
 ## Começando
 
+**Windows, por duplo clique:** `instalar.bat` prepara o ambiente e
+verifica a instalação; `verificar.bat` reconfere; `prova.bat` roda a prova
+funcional. Passo a passo completo em [`docs/INSTALACAO.md`](docs/INSTALACAO.md).
+
+**Pela linha de comando:**
+
 ```bash
 python -m venv .venv
 .venv/bin/pip install -r requirements.txt          # Windows: .venv\Scripts\pip

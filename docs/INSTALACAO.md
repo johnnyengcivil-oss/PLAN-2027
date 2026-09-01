@@ -17,11 +17,17 @@ privilégio de administrador, serviço, driver ou escrita em `Program Files`
 
 ```bat
 git clone -b claude/excel-vba-python-composicoes-f40k5d ^
-    https://github.com/johnnyengcivil-oss/PLAN-2027.git C:\BANCO_COMPOSICOES
+    https://github.com/johnnyengcivil-oss/PLAN-2027.git ^
+    "%USERPROFILE%\Documents\BANCO_COMPOSICOES"
 ```
 
 Sem Git: baixe o ZIP do branch pelo GitHub (**Code → Download ZIP**) e
-extraia para `C:\BANCO_COMPOSICOES`.
+extraia para **Documentos** ou para a **Área de Trabalho**.
+
+> **Não use a raiz do disco (`C:\`) nem `Arquivos de Programas`.** O
+> Windows exige privilégio de administrador para gravar nesses lugares, e
+> a extração pode deixar pastas para trás sem avisar. O sistema também
+> precisa criar o banco e arquivos temporários na própria pasta.
 
 As cinco bases **não vêm no repositório** — são dados proprietários de
 preço, atualizados periodicamente. Você as copia no passo 1.
@@ -30,7 +36,8 @@ preço, atualizados periodicamente. Você as copia no passo 1.
 
 ## 1. Estrutura da pasta
 
-Copie tudo para uma pasta única, por exemplo `C:\BANCO_COMPOSICOES\`:
+Copie tudo para uma pasta única **dentro do seu perfil de usuário**,
+por exemplo `%USERPROFILE%\Documents\BANCO_COMPOSICOES\`:
 
 ```
 BANCO_COMPOSICOES\
@@ -110,7 +117,7 @@ prova funcional), ambos por duplo clique.
 Com Python 3.10+ instalado:
 
 ```bat
-cd C:\BANCO_COMPOSICOES
+cd "%USERPROFILE%\Documents\BANCO_COMPOSICOES"
 python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
 ```

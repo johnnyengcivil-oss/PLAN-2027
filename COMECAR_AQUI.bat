@@ -25,6 +25,41 @@ echo.
 echo   Pressione uma tecla para comecar, ou feche a janela para desistir.
 pause >nul
 
+REM ------------------------------------------------ pasta gravavel?
+REM A raiz do disco (C:\) e as Arquivos de Programas exigem privilegio de
+REM administrador para gravar. O sistema precisa criar o banco, o
+REM config.json e a pasta _temp aqui, entao uma pasta protegida trava tudo
+REM - e pior, uma extracao para la pode ter deixado arquivos para tras sem
+REM avisar. Melhor descobrir agora do que no meio do caminho.
+echo teste> "%~dp0_permissao.tmp" 2>nul
+if not exist "%~dp0_permissao.tmp" (
+    echo.
+    echo ========================================================================
+    echo   ESTA PASTA E PROTEGIDA PELO WINDOWS
+    echo ========================================================================
+    echo.
+    echo   Pasta atual:
+    echo     %CD%
+    echo.
+    echo   Nao consigo gravar aqui sem privilegio de administrador. O sistema
+    echo   precisa criar o banco de dados e arquivos temporarios na propria
+    echo   pasta, entao ele nao funciona neste lugar.
+    echo.
+    echo   SOLUCAO: mova a pasta inteira para um lugar seu, por exemplo:
+    echo.
+    echo     %USERPROFILE%\Documents\BANCO_COMPOSICOES
+    echo     %USERPROFILE%\Desktop\BANCO_COMPOSICOES
+    echo.
+    echo   Depois execute o COMECAR_AQUI.bat de la.
+    echo.
+    echo   Abrindo a sua pasta Documentos...
+    start "" "%USERPROFILE%\Documents"
+    echo.
+    pause
+    exit /b 1
+)
+del "%~dp0_permissao.tmp" >nul 2>&1
+
 REM ------------------------------------------------------------------ etapa 1
 echo.
 echo ########################################################################

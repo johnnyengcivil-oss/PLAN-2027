@@ -85,7 +85,20 @@ def main() -> int:
     cfg = config.carregar(RAIZ)
 
     # ------------------------------------------------------------ 2
-    secao("2", "BASES DE DADOS")
+    secao("2", "PERMISSÃO DE GRAVAÇÃO NA PASTA")
+    teste = RAIZ / "_permissao.tmp"
+    try:
+        teste.write_text("t", encoding="ascii")
+        teste.unlink()
+        gravavel = True
+    except OSError:
+        gravavel = False
+    item(gravavel, "A pasta aceita gravação", str(RAIZ),
+         "A raiz do disco (C:\\) e Arquivos de Programas exigem "
+         "administrador. Mova a pasta inteira para Documentos ou para a "
+         "Área de Trabalho e rode de lá.")
+
+    secao("3", "BASES DE DADOS")
     # cfg.pasta_bases cai para a raiz quando BASES/ não existe. Aqui o teste
     # é explícito, senão o diagnóstico diria "OK" apontando para a raiz.
     pasta_bases = RAIZ / "BASES"
@@ -137,7 +150,7 @@ def main() -> int:
             pass
 
     # ------------------------------------------------------------ 3
-    secao("3", "BANCO LOCAL")
+    secao("4", "BANCO LOCAL")
     banco_existe = cfg.caminho_db.exists()
     item(banco_existe, "Banco banco_composicoes.db criado",
          cfg.caminho_db.name if banco_existe else "ainda não importado",
@@ -166,7 +179,7 @@ def main() -> int:
                       f" importada em {linha['data_importacao'][:10]}")
 
             # Conhecimento já acumulado — não pode ser perdido em reimportações.
-            secao("4", "CONHECIMENTO ACUMULADO (preservado entre atualizações)")
+            secao("5", "CONHECIMENTO ACUMULADO (preservado entre atualizações)")
             for rotulo, sql in (
                     ("Vínculos de serviço confirmados",
                      "SELECT COUNT(*) FROM service_mappings"
@@ -186,7 +199,7 @@ def main() -> int:
             con.close()
 
     # ------------------------------------------------------------ 5
-    secao("5", "MOTOR RESPONDENDO")
+    secao("6", "MOTOR RESPONDENDO")
     try:
         from motor import api
         resposta = api.executar({"acao": "status", "raiz": str(RAIZ)})
@@ -197,7 +210,7 @@ def main() -> int:
         item(False, "Motor responde", str(exc)[:70])
 
     # ------------------------------------------------------------ 6
-    secao("6", "INTERFACE EXCEL")
+    secao("7", "INTERFACE EXCEL")
     xlsm = RAIZ / "Sistema_Composicoes.xlsm"
     xlsx = RAIZ / "Sistema_Composicoes.xlsx"
     modulos = sorted((RAIZ / "vba").glob("*.bas"))

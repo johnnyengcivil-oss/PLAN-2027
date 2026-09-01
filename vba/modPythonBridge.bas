@@ -25,41 +25,121 @@ Public Function RaizSistema() As String
 End Function
 
 Public Function CaminhoMotor() As String
-    ' Preferencia: executavel empacotado. Em desenvolvimento, usa o Python
-    ' do sistema com python\main.py (item 61).
-    Dim fso As Object, base As String
+    ' Monta o comando que executa o motor. Procura, nesta ordem:
+    '   1. motor.exe empacotado (item 61)
+    '   2. python\main.py, a partir da pasta do .xlsm
+    '
+    ' A busca do main.py nao se limita a pasta do .xlsm: o arquivo pode ter
+    ' sido movido para fora, ou o ZIP ter sido extraido criando uma
+    ' subpasta. Por isso tambem olha um nivel acima e as subpastas.
+    Dim fso As Object, base As String, script As String
     Set fso = CreateObject("Scripting.FileSystemObject")
     base = RaizSistema()
 
     If fso.FileExists(base & "\motor.exe") Then
         CaminhoMotor = """" & base & "\motor.exe"""
-    ElseIf fso.FileExists(base & "\motor\motor.exe") Then
+        Exit Function
+    End If
+    If fso.FileExists(base & "\motor\motor.exe") Then
         CaminhoMotor = """" & base & "\motor\motor.exe"""
-    ElseIf fso.FileExists(base & "\python\main.py") Then
-        CaminhoMotor = ExecutavelPython() & " """ & base & "\python\main.py"""
+        Exit Function
+    End If
+
+    script = LocalizarScript()
+    If Len(script) > 0 Then
+        CaminhoMotor = ExecutavelPython() & " """ & script & """"
     Else
         CaminhoMotor = ""
     End If
 End Function
 
-Private Function ExecutavelPython() As String
-    Dim fso As Object, base As String
+Public Function LocalizarScript() As String
+    ' Devolve o caminho completo de python\main.py, ou vazio.
+    Dim fso As Object, base As String, pasta As Object, subPasta As Object
     Set fso = CreateObject("Scripting.FileSystemObject")
     base = RaizSistema()
-    ' Ambiente virtual local tem prioridade: nao depende do PATH do usuario.
+
+    If fso.FileExists(base & "\python\main.py") Then
+        LocalizarScript = base & "\python\main.py"
+        Exit Function
+    End If
+
+    ' Um nivel acima: caso o .xlsm tenha sido movido para uma subpasta.
+    If fso.FolderExists(base) Then
+        Dim pai As String
+        pai = fso.GetParentFolderName(base)
+        If Len(pai) > 0 Then
+            If fso.FileExists(pai & "\python\main.py") Then
+                LocalizarScript = pai & "\python\main.py"
+                Exit Function
+            End If
+        End If
+    End If
+
+    ' Uma subpasta abaixo: ZIP extraido criando pasta com o nome do arquivo.
+    If fso.FolderExists(base) Then
+        Set pasta = fso.GetFolder(base)
+        For Each subPasta In pasta.SubFolders
+            If fso.FileExists(subPasta.Path & "\python\main.py") Then
+                LocalizarScript = subPasta.Path & "\python\main.py"
+                Exit Function
+            End If
+        Next subPasta
+    End If
+
+    LocalizarScript = ""
+End Function
+
+Public Function ExecutavelPython() As String
+    ' Descobre o interpretador, na mesma ordem do _localizar_python.bat:
+    '   1. python-portatil\python.exe    (vem dentro do pacote)
+    '   2. python-portatil\<subpasta>\python.exe
+    '   3. .venv\Scripts\python.exe
+    '   4. python do PATH
+    Dim fso As Object, base As String, pasta As Object, subPasta As Object
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    base = PastaDoSistema()
+
+    If fso.FileExists(base & "\python-portatil\python.exe") Then
+        ExecutavelPython = """" & base & "\python-portatil\python.exe"""
+        Exit Function
+    End If
+
+    If fso.FolderExists(base & "\python-portatil") Then
+        Set pasta = fso.GetFolder(base & "\python-portatil")
+        For Each subPasta In pasta.SubFolders
+            If fso.FileExists(subPasta.Path & "\python.exe") Then
+                ExecutavelPython = """" & subPasta.Path & "\python.exe"""
+                Exit Function
+            End If
+        Next subPasta
+    End If
+
     If fso.FileExists(base & "\.venv\Scripts\python.exe") Then
         ExecutavelPython = """" & base & "\.venv\Scripts\python.exe"""
-    ElseIf fso.FileExists(base & "\python\.venv\Scripts\python.exe") Then
-        ExecutavelPython = """" & base & "\python\.venv\Scripts\python.exe"""
-    Else
-        ExecutavelPython = "python"
+        Exit Function
     End If
+
+    ExecutavelPython = "python"
+End Function
+
+Public Function PastaDoSistema() As String
+    ' Pasta que realmente contem o sistema: a do main.py localizado, que
+    ' pode nao ser a do .xlsm.
+    Dim fso As Object, script As String
+    script = LocalizarScript()
+    If Len(script) = 0 Then
+        PastaDoSistema = RaizSistema()
+        Exit Function
+    End If
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    PastaDoSistema = fso.GetParentFolderName(fso.GetParentFolderName(script))
 End Function
 
 Private Function PastaTemp() As String
     Dim fso As Object, caminho As String
     Set fso = CreateObject("Scripting.FileSystemObject")
-    caminho = RaizSistema() & "\" & PASTA_TEMP
+    caminho = PastaDoSistema() & "\" & PASTA_TEMP
     If Not fso.FolderExists(caminho) Then fso.CreateFolder caminho
     PastaTemp = caminho
 End Function
@@ -83,9 +163,7 @@ Public Function Chamar(ByVal pedidoJson As String, _
 
     motor = CaminhoMotor()
     If Len(motor) = 0 Then
-        Set Chamar = RespostaErro( _
-            "Motor nao encontrado. Esperado motor.exe ou python\main.py em: " _
-            & RaizSistema())
+        Set Chamar = RespostaErro(DiagnosticoMotor())
         Exit Function
     End If
 
@@ -96,7 +174,7 @@ Public Function Chamar(ByVal pedidoJson As String, _
 
     comando = motor & " --pedido """ & arqPedido & """" & _
               " --resposta """ & arqResposta & """" & _
-              " --raiz """ & RaizSistema() & """"
+              " --raiz """ & PastaDoSistema() & """"
 
     Application.StatusBar = "Processando no motor Python..."
     codigo = wsh.Run("cmd /c " & comando, 0, True)   ' 0 = janela oculta, True = aguarda
@@ -199,5 +277,52 @@ Public Sub TestarConexao()
                vbInformation, "Conexao com o motor"
     Else
         MsgBox "Falha: " & MensagemErro(r), vbCritical, "Conexao com o motor"
+    End If
+End Sub
+
+Public Function DiagnosticoMotor() As String
+    ' Texto que diz exatamente ONDE o motor foi procurado. Sem isso,
+    ' "motor nao encontrado" nao da nenhuma pista de como resolver.
+    Dim fso As Object, base As String, sb As String
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    base = RaizSistema()
+
+    sb = "Motor nao encontrado." & vbCrLf & vbCrLf & _
+         "Pasta do arquivo Excel:" & vbCrLf & "  " & base & vbCrLf & vbCrLf & _
+         "Procurei por:" & vbCrLf
+    sb = sb & "  " & Marca(fso, base & "\motor.exe") & vbCrLf
+    sb = sb & "  " & Marca(fso, base & "\motor\motor.exe") & vbCrLf
+    sb = sb & "  " & Marca(fso, base & "\python\main.py") & vbCrLf
+    If Len(fso.GetParentFolderName(base)) > 0 Then
+        sb = sb & "  " & Marca(fso, fso.GetParentFolderName(base) & "\python\main.py") & vbCrLf
+    End If
+    sb = sb & vbCrLf & "Interpretador Python:" & vbCrLf
+    sb = sb & "  " & Marca(fso, base & "\python-portatil\python.exe") & vbCrLf
+    sb = sb & "  " & Marca(fso, base & "\.venv\Scripts\python.exe") & vbCrLf
+    sb = sb & vbCrLf & _
+         "O arquivo Sistema_Composicoes.xlsm precisa ficar na MESMA pasta" & vbCrLf & _
+         "que as pastas python, vba e BASES. Se ele foi movido, devolva-o" & vbCrLf & _
+         "para junto delas e reabra."
+    DiagnosticoMotor = sb
+End Function
+
+Private Function Marca(ByVal fso As Object, ByVal caminho As String) As String
+    If fso.FileExists(caminho) Then
+        Marca = "[existe]     " & caminho
+    Else
+        Marca = "[nao existe] " & caminho
+    End If
+End Function
+
+Public Sub MostrarDiagnostico()
+    ' Chamavel pela janela Verificacao Imediata (Ctrl+G) para depurar.
+    Dim motor As String
+    motor = CaminhoMotor()
+    If Len(motor) = 0 Then
+        MsgBox DiagnosticoMotor(), vbExclamation, "Diagnostico do motor"
+    Else
+        MsgBox "Comando que sera executado:" & vbCrLf & vbCrLf & motor & vbCrLf & vbCrLf & _
+               "Pasta do sistema:" & vbCrLf & PastaDoSistema(), _
+               vbInformation, "Diagnostico do motor"
     End If
 End Sub

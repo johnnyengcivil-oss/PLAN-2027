@@ -9,6 +9,9 @@ Attribute VB_Name = "modUI"
 Option Explicit
 
 Public Sub ReconstruirBotoes()
+    ' Silenciosa de proposito: e chamada pelo instalar_vba.vbs com o Excel
+    ' invisivel, e um MsgBox ali travaria a instalacao numa janela que
+    ' ninguem ve.
     LimparBotoes
     CriarBotoesInicio
     CriarBotoesServicos
@@ -17,28 +20,54 @@ Public Sub ReconstruirBotoes()
     CriarBotoesBanco
     CriarBotoesPendencias
     CriarBotoesConfiguracao
+End Sub
+
+Public Sub ReconstruirBotoesComAviso()
+    ' Versao para o botao da aba CONFIGURACAO, onde ha alguem olhando.
+    ReconstruirBotoes
     modUtils.Avisar "Botoes reconstruidos em todas as abas."
 End Sub
 
 Private Sub LimparBotoes()
     Dim ws As Worksheet, sh As Shape, i As Long
+    On Error Resume Next
     For Each ws In ThisWorkbook.Worksheets
         For i = ws.Shapes.Count To 1 Step -1
             Set sh = ws.Shapes(i)
             If sh.Type = msoFormControl Or sh.Name Like "btn*" Then sh.Delete
         Next i
     Next ws
+    On Error GoTo 0
 End Sub
 
 Private Sub Botao(ByVal ws As Worksheet, ByVal esquerda As Double, _
                   ByVal topo As Double, ByVal largura As Double, _
                   ByVal texto As String, ByVal macro As String)
-    Dim b As Object
-    Set b = ws.Buttons.Add(esquerda, topo, largura, 26)
-    b.Name = "btn" & Replace(macro, ".", "_")
-    b.Caption = texto
-    b.OnAction = macro
-    b.Font.Size = 10
+    ' Usa Shapes.AddFormControl e escreve o texto por TextFrame: atribuir
+    ' .Caption direto no objeto Button falha em algumas versoes do Excel, e
+    ' o erro abortava a criacao dos botoes seguintes - deixando um unico
+    ' botao com a legenda padrao "Botao 1".
+    Const xlButtonControl As Long = 0
+    Dim sh As Shape
+    On Error Resume Next
+
+    Set sh = ws.Shapes.AddFormControl(xlButtonControl, esquerda, topo, largura, 26)
+    If sh Is Nothing Then Exit Sub
+
+    sh.OnAction = macro
+    sh.Name = "btn" & Replace(macro, ".", "_")
+
+    sh.TextFrame.Characters.Text = texto
+    If Err.Number <> 0 Then
+        Err.Clear
+        sh.TextFrame2.TextRange.Text = texto     ' alternativa
+        Err.Clear
+    End If
+
+    sh.TextFrame.Characters.Font.Size = 9
+    sh.TextFrame.HorizontalAlignment = xlHAlignCenter
+    Err.Clear
+    On Error GoTo 0
 End Sub
 
 Private Sub CriarBotoesInicio()
@@ -53,6 +82,7 @@ Private Sub CriarBotoesInicio()
     Botao ws, 420, 280, 190, "LOG", "modMain.BotaoLog"
     Botao ws, 420, 312, 190, "ANALISAR EM LOTE", "modMain.BotaoAnalisarLote"
     Botao ws, 420, 344, 190, "TESTAR MOTOR", "modMain.BotaoTestarMotor"
+    Botao ws, 420, 376, 190, "DIAGNOSTICO DO MOTOR", "modPythonBridge.MostrarDiagnostico"
 End Sub
 
 Private Sub CriarBotoesServicos()
@@ -112,5 +142,5 @@ Private Sub CriarBotoesConfiguracao()
     Botao ws, 620, 12, 150, "RECARREGAR", "modConfig.CarregarConfiguracao"
     Botao ws, 620, 44, 150, "SALVAR CONFIGURACAO", "modConfig.SalvarConfiguracao"
     Botao ws, 780, 12, 150, "ATUALIZAR BASES", "modConfig.AtualizarBases"
-    Botao ws, 780, 44, 150, "RECONSTRUIR BOTOES", "modUI.ReconstruirBotoes"
+    Botao ws, 780, 44, 150, "RECONSTRUIR BOTOES", "modUI.ReconstruirBotoesComAviso"
 End Sub

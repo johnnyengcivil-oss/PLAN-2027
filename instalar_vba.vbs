@@ -86,6 +86,14 @@ End If
 ' Cria os botoes de todas as abas.
 On Error Resume Next
 excel.Run "modUI.ReconstruirBotoes"
+If Err.Number <> 0 Then
+    WScript.Echo ""
+    WScript.Echo "  AVISO: nao foi possivel criar os botoes automaticamente."
+    WScript.Echo "  (" & Err.Description & ")"
+    WScript.Echo "  Depois de abrir a planilha, pressione ALT+F11, depois"
+    WScript.Echo "  CTRL+G, digite  modUI.ReconstruirBotoesComAviso  e ENTER."
+    Err.Clear
+End If
 On Error GoTo 0
 
 If fso.FileExists(destino) Then fso.DeleteFile destino, True

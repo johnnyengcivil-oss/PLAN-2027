@@ -13,6 +13,10 @@ REM ===========================================================================
 
 cd /d "%~dp0"
 
+REM Quando chamado por COMECAR_AQUI.bat, nao pausa entre as etapas.
+set "PAUSAR=1"
+if /i "%~1"=="--sem-pausa" set "PAUSAR=0"
+
 echo.
 echo ========================================================================
 echo   INSTALADOR - BANCO PROPRIO DE COMPOSICOES
@@ -130,4 +134,5 @@ if "%RESULTADO%"=="0" (
 )
 echo ========================================================================
 echo.
-pause
+if "%PAUSAR%"=="1" pause
+exit /b %RESULTADO%

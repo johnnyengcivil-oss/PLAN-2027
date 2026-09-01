@@ -44,9 +44,12 @@ SERVIÇO DE MÃO DE OBRA DA EMPRESA
 
 ## Começando
 
-**Windows, por duplo clique:** `instalar.bat` prepara o ambiente e
-verifica a instalação; `verificar.bat` reconfere; `prova.bat` roda a prova
-funcional. Passo a passo completo em [`docs/INSTALACAO.md`](docs/INSTALACAO.md).
+**Windows, por duplo clique:** `COMECAR_AQUI.bat` faz a implantação
+inteira — ambiente, importação das bases e montagem da planilha com as
+macros. Os demais atalhos: `instalar.bat` (só o ambiente),
+`MONTAR_PLANILHA.bat` (só o `.xlsm`), `verificar.bat` (diagnóstico) e
+`prova.bat` (prova funcional). Passo a passo em
+[`docs/INSTALACAO.md`](docs/INSTALACAO.md).
 
 **Pela linha de comando:**
 

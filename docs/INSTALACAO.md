@@ -1,7 +1,11 @@
 # Instalação
 
-> **Conferir a qualquer momento:** `python verificar.py` diz, passo a passo,
-> o que já está pronto e o que falta — com o comando exato de cada pendência.
+> **Caminho mais curto:** duplo clique em `COMECAR_AQUI.bat`. Ele executa
+> as três etapas — ambiente, bases e planilha — sem digitar nada.
+>
+> **Conferir a qualquer momento:** duplo clique em `verificar.bat`. Diz,
+> passo a passo, o que já está pronto e o que falta, com o comando exato
+> de cada pendência.
 
 Requisitos: Windows com Excel, **usuário comum** — nenhuma etapa pede
 privilégio de administrador, serviço, driver ou escrita em `Program Files`
@@ -129,20 +133,22 @@ Isso gera `Sistema_Composicoes.xlsx` com as nove abas já formatadas.
 Falta acrescentar o código VBA — e isso precisa do Excel, então é feito
 uma única vez, na máquina do usuário.
 
-### 3a. Importação automática (recomendado)
+### 3a. Automático — duplo clique em `MONTAR_PLANILHA.bat`
 
-```bat
-cscript //nologo instalar_vba.vbs
-```
+Ele gera o `.xlsx`, insere os dez módulos e salva `Sistema_Composicoes.xlsm`.
 
-O script abre o Excel via COM, importa os dez módulos de `vba\`, cria os
-botões e salva como `Sistema_Composicoes.xlsm`.
+Para inserir os módulos, o Excel exige a opção **"Confiar no acesso ao
+modelo de objeto do projeto do VBA"** — a chave `AccessVBOM` em
+`HKEY_CURRENT_USER`. O script:
 
-Exige a opção **"Confiar no acesso ao modelo de objeto do projeto do VBA"**,
-em *Arquivo → Opções → Central de Confiabilidade → Configurações da Central
-de Confiabilidade → Configurações de Macro*. É uma caixa de seleção do
-próprio Excel, marcável por usuário comum. Se preferir não habilitá-la,
-use o passo 3b.
+1. lê e guarda o valor atual;
+2. **pede sua autorização** antes de mudar qualquer coisa;
+3. liga a opção, monta a planilha;
+4. **devolve a opção ao valor anterior**, inclusive se algo falhar.
+
+Só afeta o seu usuário do Windows, não a máquina, e não exige
+administrador. Se preferir não mexer nisso, responda `N`: o script então
+mostra o caminho manual do passo 3b.
 
 ### 3b. Importação manual (2 minutos, sem alterar nenhuma configuração)
 
@@ -150,15 +156,10 @@ use o passo 3b.
 2. **Arquivo → Salvar como** → tipo **Pasta de Trabalho Habilitada para
    Macro (*.xlsm)** → nome `Sistema_Composicoes`.
 3. `Alt+F11` para abrir o editor VBA.
-4. **Arquivo → Importar Arquivo** (`Ctrl+M`) e selecione, um a um, os dez
-   arquivos de `vba\`:
-
-   ```
-   modJson.bas          modPythonBridge.bas   modUtils.bas
-   modMain.bas          modUI.bas             modServices.bas
-   modCompositions.bas  modMaterials.bas      modConfig.bas
-   modDatabaseUI.bas
-   ```
+4. Abra a pasta `vba\` no Explorador de Arquivos, selecione **os dez
+   arquivos `.bas`** (`Ctrl+A`) e **arraste todos de uma vez** para a
+   janela do editor, no painel esquerdo. É uma única arrastada — não
+   precisa importar um a um.
 
 5. Ainda no editor, `Ctrl+G` para abrir a janela Verificação Imediata,
    digite `modUI.ReconstruirBotoes` e pressione `Enter`. Os botões de
